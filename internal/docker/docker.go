@@ -19,6 +19,7 @@ type ContainerInfo struct {
 	Names   []string
 	ImageID string
 	Command string
+	Ports   []container.Port
 	Created int64
 	State   container.ContainerState
 }
@@ -35,6 +36,7 @@ func ListAllRunningContainers(ctx context.Context, cli *client.Client) ([]Contai
 			Names:   c.Names,
 			ImageID: c.ImageID,
 			Command: c.Command,
+			Ports:   c.Ports,
 			State:   c.State,
 			Created: c.Created,
 		}

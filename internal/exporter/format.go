@@ -4,6 +4,7 @@ import (
 	"docker-exporter/internal/docker"
 	"github.com/docker/docker/api/types/container"
 	"github.com/prometheus/client_golang/prometheus"
+	"strconv"
 )
 
 func formatContainerInfo(ch chan<- prometheus.Metric, containerInfo []docker.ContainerInfo) {
@@ -70,5 +71,22 @@ func formatContainerCreated(ch chan<- prometheus.Metric, containerInfo []docker.
 			float64(c.Created),
 			c.ID,
 		)
+	}
+}
+
+func formatContainerPorts(ch chan<- prometheus.Metric, containerInfo []docker.ContainerInfo) {
+	for _, c := range containerInfo {
+		for _, port := range c.Ports {
+			ch <- prometheus.MustNewConstMetric(
+				containerPortsDesc,
+				prometheus.GaugeValue,
+				1,
+				c.ID,
+				strconv.Itoa(int(port.PublicPort)),
+				strconv.Itoa(int(port.PrivatePort)),
+				port.IP,
+				port.Type,
+			)
+		}
 	}
 }

@@ -1,7 +1,7 @@
 root = "."
 
 [build]
-  args_bin = []
+  args_bin = ["-v"]
   bin = "./tmp/main"
   cmd = "go build -o ./tmp/main ./cmd/main.go"
   delay = 1000

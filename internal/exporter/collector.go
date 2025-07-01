@@ -38,6 +38,12 @@ var (
 		[]string{"container_id"},
 		nil,
 	)
+	containerPortsDesc = prometheus.NewDesc(
+		"docker_container_ports",
+		"Docker container ports",
+		[]string{"container_id", "public_port", "private_port", "ip", "type"},
+		nil,
+	)
 )
 
 // NewDockerCollector creates a new DockerCollector
@@ -63,6 +69,7 @@ func (c *DockerCollector) Collect(ch chan<- prometheus.Metric) {
 		formatContainerNames(ch, containerInfo)
 		formatContainerState(ch, containerInfo)
 		formatContainerCreated(ch, containerInfo)
+		formatContainerPorts(ch, containerInfo)
 	}
 }
 

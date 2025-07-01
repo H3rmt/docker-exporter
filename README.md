@@ -6,12 +6,13 @@ This project is similar to [prometheus-podman-exporter](https://github.com/conta
 
 The exporter provides the following metrics:
 
-| Metric Name                | Type    | Description                         | Labels                                        |
-|----------------------------|---------|-------------------------------------|-----------------------------------------------|
-| `docker_container_info`    | Gauge   | Docker container information        | `container_id`, `name`, `image_id`, `command` |
-| `docker_container_name`    | Gauge   | Docker container name               | `container_id`, `name`                        |
-| `docker_container_state`   | Gauge   | Docker container state              | `container_id`                                |
-| `docker_container_created` | Counter | Docker container creation timestamp | `container_id`                                |
+| Metric Name                | Type    | Description                         | Labels                                                      |
+|----------------------------|---------|-------------------------------------|-------------------------------------------------------------|
+| `docker_container_info`    | Gauge   | Docker container information        | `container_id`, `name`, `image_id`, `command`               |
+| `docker_container_name`    | Gauge   | Docker container name               | `container_id`, `name`                                      |
+| `docker_container_state`   | Gauge   | Docker container state              | `container_id`                                              |
+| `docker_container_created` | Counter | Docker container creation timestamp | `container_id`                                              |
+| `docker_container_ports`   | Gauge   | Docker container exposed ports      | `container_id`, `public_port`, `private_port`, `ip`, `type` |
 
 ### Container States
 
