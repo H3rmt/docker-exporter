@@ -4,5 +4,9 @@
     "schedule:earlyMondays",
     "config:best-practices",
     "helpers:pinGitHubActionDigestsToSemver"
+  ],
+  postUpdateOptions: [
+    "gomodTidy",
+    "gomodUpdateImportPaths"
   ]
 }
