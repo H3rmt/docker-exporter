@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/H3rmt/docker-exporter/compare/v0.1.0...v0.1.1) (2025-07-01)
+
+
+### Bug Fixes
+
+* fix logger file refs ([57eb50c](https://github.com/H3rmt/docker-exporter/commit/57eb50c5621250d2b9e880c0ced41a4fe7a3976d))
+
 ## 0.1.0 (2025-07-01)
 
 
