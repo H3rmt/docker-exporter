@@ -3,14 +3,14 @@ module docker-exporter
 go 1.24
 
 require (
+	github.com/alecthomas/kingpin/v2 v2.4.0
 	github.com/docker/docker v28.3.0+incompatible
 	github.com/prometheus/client_golang v1.22.0
 )
 
 require (
 	github.com/Microsoft/go-winio v0.6.2 // indirect
-	github.com/alecthomas/kingpin/v2 v2.4.0 // indirect
-	github.com/alecthomas/units v0.0.0-20211218093645-b94a6e3cc137 // indirect
+	github.com/alecthomas/units v0.0.0-20240927000941-0f3dac36c52b // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/containerd/errdefs v1.0.0 // indirect
