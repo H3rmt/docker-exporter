@@ -1,4 +1,4 @@
-package exporter
+package docker
 
 import (
 	"context"
@@ -7,9 +7,9 @@ import (
 	"github.com/docker/docker/client"
 )
 
-func NewDockerClient() (*client.Client, error) {
+func NewDockerClient(host string) (*client.Client, error) {
 	return client.NewClientWithOpts(
-		client.WithHost("unix:///var/run/docker.sock"),
+		client.WithHost(host),
 		client.WithAPIVersionNegotiation(),
 	)
 }

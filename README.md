@@ -35,11 +35,8 @@ The `docker_container_state` metric uses the following values:
 # Run with default settings
 ./docker-exporter
 
-# Run with custom port
-./docker-exporter --port 9101
-
-# Run with custom address
-./docker-exporter --address 127.0.0.1
+# Run with custom port and address
+./docker-exporter --port 9101 --address 127.0.0.1
 
 # Enable verbose logging
 ./docker-exporter --verbose
@@ -50,13 +47,14 @@ The `docker_container_state` metric uses the following values:
 
 ### Command-line options
 
-| Option               | Description                           | Default   |
-|----------------------|---------------------------------------|-----------|
-| `--verbose`, `-v`    | Enable verbose mode (debug logs)      | `false`   |
-| `--quiet`, `-q`      | Enable quiet mode (disable info logs) | `false`   |
-| `--internal-metrics` | Enable internal metrics               | `false`   |
-| `--address`, `-a`    | Address to listen on                  | `0.0.0.0` |
-| `--port`, `-p`       | Port to listen on                     | `9100`    |
+| Option                | Description                           | Default                       |
+|-----------------------|---------------------------------------|-------------------------------|
+| `--verbose`, `-v`     | Enable verbose mode (debug logs)      | `false`                       |
+| `--quiet`, `-q`       | Enable quiet mode (disable info logs) | `false`                       |
+| `--internal-metrics`  | Enable internal metrics               | `false`                       |
+| `--address`, `-a`     | Address to listen on                  | `0.0.0.0`                     |
+| `--port`, `-p`        | Port to listen on                     | `9100`                        |
+| `--docker-host`, `-d` | Host to connect to                    | `unix:///var/run/docker.sock` |
 
 ### Endpoints
 

@@ -2,6 +2,7 @@ package exporter
 
 import (
 	"context"
+	"docker-exporter/internal/docker"
 	"github.com/docker/docker/client"
 	"github.com/prometheus/client_golang/prometheus"
 	"log"
@@ -54,7 +55,7 @@ func (c *DockerCollector) Describe(ch chan<- *prometheus.Desc) {
 // Collect implements the prometheus.Collector interface
 func (c *DockerCollector) Collect(ch chan<- prometheus.Metric) {
 	ctx := context.Background()
-	containerInfo, err := ListAllRunningContainers(ctx, c.dockerClient)
+	containerInfo, err := docker.ListAllRunningContainers(ctx, c.dockerClient)
 	if err != nil {
 		log.Printf("Failed to list running containers: %v", err)
 	} else {

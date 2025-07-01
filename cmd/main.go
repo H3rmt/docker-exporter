@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"docker-exporter/internal/docker"
 	"docker-exporter/internal/exporter"
 	"docker-exporter/internal/log"
 	"docker-exporter/internal/status"
@@ -22,6 +23,7 @@ var (
 	internalMetrics = kingpin.Flag("internal-metrics", "Enable internal metrics.").Default("false").Bool()
 	address         = kingpin.Flag("address", "Address to listen on.").Short('a').Default("0.0.0.0").String()
 	port            = kingpin.Flag("port", "Port to listen on.").Short('p').Default("9100").String()
+	dockerHost      = kingpin.Flag("docker-host", "Host to connect to.").Short('d').Default("unix:///var/run/docker.sock").String()
 )
 
 func main() {
@@ -32,7 +34,7 @@ func main() {
 	log.Info("Starting Docker Prometheus exporter...")
 
 	// Initialize Docker client and metrics
-	dockerClient, err := exporter.NewDockerClient()
+	dockerClient, err := docker.NewDockerClient(*dockerHost)
 	if err != nil {
 		log.Error("Failed to create Docker client: %v", err)
 	}

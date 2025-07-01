@@ -1,11 +1,12 @@
 package exporter
 
 import (
+	"docker-exporter/internal/docker"
 	"github.com/docker/docker/api/types/container"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func formatContainerInfo(ch chan<- prometheus.Metric, containerInfo []ContainerInfo) {
+func formatContainerInfo(ch chan<- prometheus.Metric, containerInfo []docker.ContainerInfo) {
 	for _, c := range containerInfo {
 		ch <- prometheus.MustNewConstMetric(
 			containerInfoDesc,
@@ -19,7 +20,7 @@ func formatContainerInfo(ch chan<- prometheus.Metric, containerInfo []ContainerI
 	}
 }
 
-func formatContainerNames(ch chan<- prometheus.Metric, containerInfo []ContainerInfo) {
+func formatContainerNames(ch chan<- prometheus.Metric, containerInfo []docker.ContainerInfo) {
 	for _, c := range containerInfo {
 		for _, name := range c.Names {
 			ch <- prometheus.MustNewConstMetric(
@@ -33,7 +34,7 @@ func formatContainerNames(ch chan<- prometheus.Metric, containerInfo []Container
 	}
 }
 
-func formatContainerState(ch chan<- prometheus.Metric, containerInfo []ContainerInfo) {
+func formatContainerState(ch chan<- prometheus.Metric, containerInfo []docker.ContainerInfo) {
 	for _, c := range containerInfo {
 		var stateVal float64
 		switch c.State {
@@ -61,7 +62,7 @@ func formatContainerState(ch chan<- prometheus.Metric, containerInfo []Container
 	}
 }
 
-func formatContainerCreated(ch chan<- prometheus.Metric, containerInfo []ContainerInfo) {
+func formatContainerCreated(ch chan<- prometheus.Metric, containerInfo []docker.ContainerInfo) {
 	for _, c := range containerInfo {
 		ch <- prometheus.MustNewConstMetric(
 			containerCreatedDesc,
