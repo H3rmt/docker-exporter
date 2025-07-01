@@ -1,31 +1,40 @@
 package main
 
 import (
-	"errors"
+	"fmt"
+	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus/client_golang/prometheus"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"docker-exporter/internal/exporter"
+	"docker-exporter/internal/log"
 	"docker-exporter/internal/status"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
+var (
+	verbose         = kingpin.Flag("verbose", "Verbose mode.").Short('v').Bool()
+	internalMetrics = kingpin.Flag("internal-metrics", "Enable internal metrics.").Default("false").Bool()
+	address         = kingpin.Flag("address", "Address to listen on.").Short('a').Default("0.0.0.0").String()
+	port            = kingpin.Flag("port", "Port to listen on.").Short('p').Default("9100").String()
+)
+
 func main() {
-	log.Println("Starting Docker Prometheus exporter...")
+	kingpin.Parse()
+	log.Info("Starting Docker Prometheus exporter...")
 
 	// Initialize Docker client and metrics
 	dockerClient, err := exporter.NewDockerClient()
 	if err != nil {
-		log.Fatalf("Failed to create Docker client: %v", err)
+		log.Error("Failed to create Docker client: %v", err)
 	}
 
 	var reg prometheus.Gatherer
-	if os.Getenv("ENABLE_INTERNAL_METRICS") == "true" {
+	if *internalMetrics {
 		reg = prometheus.DefaultGatherer
 		exporter.RegisterCollectorsWithRegistry(dockerClient, nil)
 	} else {
@@ -38,12 +47,12 @@ func main() {
 	http.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
 	http.Handle("/status", status.HandleStatus(dockerClient))
 
-	server := &http.Server{Addr: ":9100"}
+	server := &http.Server{Addr: fmt.Sprintf("%s:%s", *address, *port), ErrorLog: log.WarningLogger}
 
 	go func() {
-		log.Println("Listening on :9100/metrics")
-		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatalf("HTTP server failed: %v", err)
+		log.Info("Listening on :9100/metrics")
+		if err := server.ListenAndServe(); err != nil {
+			log.Error("HTTP server failed: %v", err)
 		}
 	}()
 
@@ -52,9 +61,9 @@ func main() {
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 	<-sig
 
-	log.Println("Shutting down exporter...")
+	log.Info("Shutting down exporter...")
 	err = server.Close()
 	if err != nil {
-		log.Fatalf("Failed to close HTTP server: %v", err)
+		log.Error("Failed to close HTTP server: %v", err)
 	}
 }
