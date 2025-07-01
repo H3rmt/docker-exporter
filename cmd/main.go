@@ -17,7 +17,8 @@ import (
 )
 
 var (
-	verbose         = kingpin.Flag("verbose", "Verbose mode.").Short('v').Bool()
+	verbose         = kingpin.Flag("verbose", "Verbose mode (enabled debug logs).").Short('v').Default("false").Bool()
+	quiet           = kingpin.Flag("quiet", "Quiet mode (disables info logs).").Short('q').Default("false").Bool()
 	internalMetrics = kingpin.Flag("internal-metrics", "Enable internal metrics.").Default("false").Bool()
 	address         = kingpin.Flag("address", "Address to listen on.").Short('a').Default("0.0.0.0").String()
 	port            = kingpin.Flag("port", "Port to listen on.").Short('p').Default("9100").String()
@@ -25,6 +26,9 @@ var (
 
 func main() {
 	kingpin.Parse()
+	log.SetVerbose(*verbose)
+	log.SetQuiet(*quiet)
+
 	log.Info("Starting Docker Prometheus exporter...")
 
 	// Initialize Docker client and metrics
