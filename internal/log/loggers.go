@@ -1,6 +1,7 @@
 package log
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -16,8 +17,8 @@ var (
 func init() {
 	// By default, debug logging is disabled
 	DebugLogger = log.New(io.Discard, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
-	InfoLogger = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
-	WarningLogger = log.New(os.Stderr, "WARNING: ", log.Ldate|log.Ltime|log.Lshortfile)
+	InfoLogger = log.New(os.Stdout, "INFO:  ", log.Ldate|log.Ltime|log.Lshortfile)
+	WarningLogger = log.New(os.Stderr, "WARN:  ", log.Ldate|log.Ltime|log.Lshortfile)
 	ErrorLogger = log.New(os.Stderr, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile)
 }
 
@@ -38,19 +39,19 @@ func SetQuiet(quiet bool) {
 	}
 }
 
-func Debug(v ...any) {
-	DebugLogger.Println(v...)
+func Debug(format string, v ...any) {
+	_ = DebugLogger.Output(2, fmt.Sprintf(format, v...))
 }
 
-func Info(v ...any) {
-	InfoLogger.Println(v...)
+func Info(format string, v ...any) {
+	_ = InfoLogger.Output(2, fmt.Sprintf(format, v...))
 }
 
-func Warning(v ...any) {
-	WarningLogger.Println(v...)
+func Warning(format string, v ...any) {
+	_ = WarningLogger.Output(2, fmt.Sprintf(format, v...))
 }
 
-func Error(v ...any) {
-	ErrorLogger.Println(v...)
+func Error(format string, v ...any) {
+	_ = ErrorLogger.Output(2, fmt.Sprintf(format, v...))
 	os.Exit(1)
 }

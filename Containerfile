@@ -16,4 +16,7 @@ FROM --platform=$TARGETOS/$TARGETARCH ghcr.io/arca-consult/scratch:0.0.2@sha256:
 WORKDIR /
 COPY --from=builder /app/exporter /exporter
 
+# needed as only root can access docker socket
+USER 0:0
+
 ENTRYPOINT ["/exporter"]

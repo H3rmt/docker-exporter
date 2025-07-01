@@ -30,8 +30,7 @@ func main() {
 	kingpin.Parse()
 	log.SetVerbose(*verbose)
 	log.SetQuiet(*quiet)
-
-	log.Info("Starting Docker Prometheus exporter...")
+	log.Info("Starting Docker Prometheus exporter, uid: %d, gid: %d", os.Getuid(), os.Getgid())
 
 	// Initialize Docker client and metrics
 	dockerClient, err := docker.NewDockerClient(*dockerHost)

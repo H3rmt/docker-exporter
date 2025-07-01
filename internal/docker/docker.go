@@ -40,7 +40,7 @@ func ListAllRunningContainers(ctx context.Context, cli *client.Client) ([]Contai
 			State:   c.State,
 			Created: c.Created,
 		}
-		log.DebugLogger.Printf("Container: %v", containerInfos[i])
+		log.Debug("Container: %v", containerInfos[i])
 	}
 	return containerInfos, nil
 }

@@ -80,3 +80,23 @@ go install github.com/air-verse/air@latest
 
 air
 ```
+
+## Run with docker
+
+```bash
+docker run -d --name docker-exporter -p 9100:9100 -v /var/run/docker.sock:/var/run/docker.sock:ro ghcr.io/h3rmt/docker-exporter:latest -p 9100
+```
+
+## Run with docker-compose
+
+```yaml
+services:
+  docker-exporter:
+    image: ghcr.io/h3rmt/docker-exporter:latest
+    container_name: docker-exporter
+    restart: unless-stopped
+    ports:
+      - "9100:9100"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+```
