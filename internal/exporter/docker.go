@@ -2,6 +2,7 @@ package exporter
 
 import (
 	"context"
+	"docker-exporter/internal/log"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 )
@@ -13,10 +14,31 @@ func NewDockerClient() (*client.Client, error) {
 	)
 }
 
-func ListRunningContainers(cli *client.Client) (int, error) {
-	containers, err := cli.ContainerList(context.Background(), container.ListOptions{})
+type ContainerInfo struct {
+	ID      string
+	Names   []string
+	ImageID string
+	Command string
+	Created int64
+	State   container.ContainerState
+}
+
+func ListAllRunningContainers(ctx context.Context, cli *client.Client) ([]ContainerInfo, error) {
+	containers, err := cli.ContainerList(ctx, container.ListOptions{All: true})
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	return len(containers), nil
+	containerInfos := make([]ContainerInfo, len(containers))
+	for i, c := range containers {
+		containerInfos[i] = ContainerInfo{
+			ID:      c.ID,
+			Names:   c.Names,
+			ImageID: c.ImageID,
+			Command: c.Command,
+			State:   c.State,
+			Created: c.Created,
+		}
+		log.DebugLogger.Printf("Container: %v", containerInfos[i])
+	}
+	return containerInfos, nil
 }
