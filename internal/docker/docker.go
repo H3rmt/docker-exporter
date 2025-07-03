@@ -137,6 +137,10 @@ type recStats struct {
 	MemoryStats struct {
 		Usage uint64 `json:"usage"`
 		Limit uint64 `json:"limit"`
+		Stats struct {
+			//ActiveFile   uint64 `json:"active_file"`
+			InactiveFile uint64 `json:"inactive_file"`
+		} `json:"stats"`
 	} `json:"memory_stats"`
 	Networks map[string]struct {
 		RxBytes   uint64 `json:"rx_bytes"`
@@ -187,11 +191,12 @@ func (client *Client) GetContainerStats(ctx context.Context, containerID string)
 		}
 	}
 
+	log.Debug("RecStats: %s %#v", containerID, recStats)
 	stat := ContainerStats{
 		PIds:                    recStats.PidsStats.Current,
 		CPUinUserModeMicroSec:   recStats.CpuStats.CpuUsage.UsageInUsermode / 1000,
 		CPUinKernelModeMicroSec: recStats.CpuStats.CpuUsage.UsageInKernelmode / 1000,
-		MemoryUsageKiB:          recStats.MemoryStats.Usage / 1024,
+		MemoryUsageKiB:          (recStats.MemoryStats.Usage - recStats.MemoryStats.Stats.InactiveFile) / 1024,
 		MemoryLimitKiB:          recStats.MemoryStats.Limit / 1024,
 		NetSendBytes:            netSendBytes,
 		NetSendDropped:          netSendDropped,
