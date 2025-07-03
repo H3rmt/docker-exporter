@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/H3rmt/docker-exporter/compare/v1.0.0...v1.0.1) (2025-07-03)
+
+
+### Bug Fixes
+
+* fix mem computation ([740b4ea](https://github.com/H3rmt/docker-exporter/commit/740b4ea9b913f5b572fe46e348b89bcf18305acc))
+
 ## [1.0.0](https://github.com/H3rmt/docker-exporter/compare/v0.1.1...v1.0.0) (2025-07-03)
 
 
