@@ -1,0 +1,5 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="metrics | #1" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" activateToolWindowBeforeRun="false" nameIsGenerated="true" path="$PROJECT_DIR$/http/metrics.http" executionIdentifier="#1" runType="Run single request">
+    <method v="2" />
+  </configuration>
+</component>
