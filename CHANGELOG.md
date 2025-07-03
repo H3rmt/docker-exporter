@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.0](https://github.com/H3rmt/docker-exporter/compare/v0.1.1...v1.0.0) (2025-07-03)
+
+
+### Features
+
+* added many new metrics ([137f96b](https://github.com/H3rmt/docker-exporter/commit/137f96b80609e779a9bfb0388a970441d5843bc4))
+
 ## [0.1.1](https://github.com/H3rmt/docker-exporter/compare/v0.1.0...v0.1.1) (2025-07-01)
 
 
