@@ -17,6 +17,7 @@ func formatContainerInfo(ch chan<- prometheus.Metric, containerInfo []docker.Con
 			c.Names[0],
 			c.ImageID,
 			c.Command,
+			c.NetworkMode,
 		)
 	}
 }
@@ -88,5 +89,27 @@ func formatContainerPorts(ch chan<- prometheus.Metric, containerInfo []docker.Co
 				port.Type,
 			)
 		}
+	}
+}
+
+func formatContainerSizeRootFs(ch chan<- prometheus.Metric, containerInfo []docker.ContainerInfo) {
+	for _, c := range containerInfo {
+		ch <- prometheus.MustNewConstMetric(
+			containerSizeRootFsDesc,
+			prometheus.GaugeValue,
+			float64(c.SizeRootFs),
+			c.ID,
+		)
+	}
+}
+
+func formatContainerSizeRw(ch chan<- prometheus.Metric, containerInfo []docker.ContainerInfo) {
+	for _, c := range containerInfo {
+		ch <- prometheus.MustNewConstMetric(
+			containerSizeRwDesc,
+			prometheus.GaugeValue,
+			float64(c.SizeRw),
+			c.ID,
+		)
 	}
 }

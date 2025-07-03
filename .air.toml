@@ -2,7 +2,8 @@ root = "."
 
 [build]
   args_bin = ["-v"]
+  post_cmd = ["wget http://localhost:9100/metrics -O-"]
   bin = "./tmp/main"
   cmd = "go build -o ./tmp/main ./cmd/main.go"
-  delay = 1000
+  stop_on_error = true
 

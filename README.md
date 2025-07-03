@@ -6,27 +6,32 @@ This project is similar to [prometheus-podman-exporter](https://github.com/conta
 
 The exporter provides the following metrics:
 
-| Metric Name                | Type    | Description                         | Labels                                                      |
-|----------------------------|---------|-------------------------------------|-------------------------------------------------------------|
-| `docker_container_info`    | Gauge   | Docker container information        | `container_id`, `name`, `image_id`, `command`               |
-| `docker_container_name`    | Gauge   | Docker container name               | `container_id`, `name`                                      |
-| `docker_container_state`   | Gauge   | Docker container state              | `container_id`                                              |
-| `docker_container_created` | Counter | Docker container creation timestamp | `container_id`                                              |
-| `docker_container_ports`   | Gauge   | Docker container exposed ports      | `container_id`, `public_port`, `private_port`, `ip`, `type` |
-
-### Container States
-
-The `docker_container_state` metric uses the following values:
-
-| Value | State      |
-|-------|------------|
-| 0     | Created    |
-| 1     | Running    |
-| 2     | Paused     |
-| 3     | Restarting |
-| 4     | Removing   |
-| 5     | Exited     |
-| 6     | Dead       |
+| Metric Name                                      | Type    | Description                                                                                  | Labels                                                        |
+|--------------------------------------------------|---------|----------------------------------------------------------------------------------------------|---------------------------------------------------------------|
+| `docker_container_info`                          | Gauge   | Container information                                                                        | `container_id`, `name`, `image_id`, `command`, `network_mode` |
+| `docker_container_name`                          | Gauge   | Name for the container (can be more than one)                                                | `container_id`, `name`                                        |
+| `docker_container_state`                         | Gauge   | Container State (0=created, 1=running, 2=paused, 3=restarting, 4=removing, 5=exited, 6=dead) | `container_id`                                                |
+| `docker_container_created_seconds`               | Gauge   | Timestamp in seconds when the container was created                                          | `container_id`                                                |
+| `docker_container_started_seconds`               | Gauge   | Timestamp in seconds when the container was started                                          | `container_id`                                                |
+| `docker_container_finished_at_seconds`           | Gauge   | Timestamp in seconds when the container finished                                             | `container_id`                                                |
+| `docker_container_ports`                         | Gauge   | Forwarded Ports                                                                              | `container_id`, `public_port`, `private_port`, `ip`, `type`   |
+| `docker_container_rootfs_size_bytes`             | Gauge   | Size of rootfs in this container in bytes                                                    | `container_id`                                                |
+| `docker_container_rw_size_bytes`                 | Gauge   | Size of files that have been created or changed by this container in bytes                   | `container_id`                                                |
+| `docker_container_pids`                          | Gauge   | Number of processes running in the container                                                 | `container_id`                                                |
+| `docker_container_cpu_user_microseconds_total`   | Counter | Time (in microseconds) spent by tasks in user mode                                           | `container_id`                                                |
+| `docker_container_cpu_kernel_microseconds_total` | Counter | Time (in microseconds) spent by tasks in kernel mode                                         | `container_id`                                                |
+| `docker_container_mem_limit_kib`                 | Gauge   | Container memory limit in KiB                                                                | `container_id`                                                |
+| `docker_container_mem_usage_kib`                 | Gauge   | Container memory usage in KiB                                                                | `container_id`                                                |
+| `docker_container_net_send_bytes_total`          | Counter | Total number of bytes sent                                                                   | `container_id`                                                |
+| `docker_container_net_send_dropped_total`        | Counter | Total number of send packet drop                                                             | `container_id`                                                |
+| `docker_container_net_send_errors_total`         | Counter | Total number of send errors                                                                  | `container_id`                                                |
+| `docker_container_net_receive_bytes_total`       | Counter | Total number of bytes received                                                               | `container_id`                                                |
+| `docker_container_net_receive_dropped_total`     | Counter | Total number of receive packet drop                                                          | `container_id`                                                |
+| `docker_container_net_receive_errors_total`      | Counter | Total number of receive errors                                                               | `container_id`                                                |
+| `docker_container_block_input_total`             | Counter | Total number of bytes read from disk                                                         | `container_id`                                                |
+| `docker_container_block_output_total`            | Counter | Total number of bytes written to disk                                                        | `container_id`                                                |
+| `docker_container_exit_code`                     | Gauge   | Exit code of the container                                                                   | `container_id`                                                |
+| `docker_container_restart_count`                 | Counter | Number of times the container has been restarted                                             | `container_id`                                                |
 
 ## Usage
 

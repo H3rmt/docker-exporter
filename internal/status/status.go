@@ -1,8 +1,9 @@
 package status
 
 import (
+	"docker-exporter/internal/docker"
+	"docker-exporter/internal/log"
 	"encoding/json"
-	"github.com/docker/docker/client"
 	"net/http"
 )
 
@@ -11,7 +12,7 @@ type Response struct {
 	Error  string `json:"error"`
 }
 
-func HandleStatus(cli *client.Client) http.Handler {
+func HandleStatus(cli *docker.Client) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
@@ -21,8 +22,9 @@ func HandleStatus(cli *client.Client) http.Handler {
 		}
 
 		// Check if Docker daemon is responding
-		_, err := cli.Ping(r.Context())
+		err := cli.Ping(r.Context())
 		if err != nil {
+			log.Error("Docker daemon is not responding: %v", err)
 			response.Status = "unhealthy"
 			response.Error = err.Error()
 			w.WriteHeader(http.StatusServiceUnavailable)
