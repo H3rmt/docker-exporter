@@ -1,7 +1,6 @@
 # Docker Prometheus Exporter
 
-This project is similar to [prometheus-podman-exporter](https://github.com/containers/prometheus-podman-exporter), but
-for Docker containers instead of Podman containers. It exports Docker container metrics in Prometheus format.
+This project is similar to [prometheus-podman-exporter](https://github.com/containers/prometheus-podman-exporter), but for Docker containers instead of Podman containers. It exports Docker container metrics in Prometheus format.
 
 Grafana dashboard is available at [dashboard.json](./dashboard.json)
 
