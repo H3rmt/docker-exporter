@@ -5,7 +5,7 @@
     "config:best-practices",
     "helpers:pinGitHubActionDigestsToSemver"
   ],
-  postUpdateOptions: [
+  "postUpdateOptions": [
     "gomodTidy",
     "gomodUpdateImportPaths"
   ]
