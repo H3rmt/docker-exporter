@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.0.2](https://github.com/H3rmt/docker-exporter/compare/v1.0.1...v1.0.2) (2025-12-10)
+
+
+### Bug Fixes
+
+* **deps:** update module github.com/docker/docker to v28.3.3+incompatible [security] ([d54c1c0](https://github.com/H3rmt/docker-exporter/commit/d54c1c045adaf59512733999f7ae2f903322218c))
+* **deps:** update module github.com/docker/docker to v28.5.2+incompatible ([8c82db6](https://github.com/H3rmt/docker-exporter/commit/8c82db6566e54378754a7ccc62fdc57532d64dbf))
+* **deps:** update module github.com/prometheus/client_golang to v1.23.2 ([00d8b86](https://github.com/H3rmt/docker-exporter/commit/00d8b8611e05c2fba1287024dfd2f0ddd14773e9))
+
 ## [1.0.1](https://github.com/H3rmt/docker-exporter/compare/v1.0.0...v1.0.1) (2025-07-03)
 
 
