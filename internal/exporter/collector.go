@@ -10,9 +10,16 @@ import (
 // DockerCollector implements the prometheus.Collector interface
 type DockerCollector struct {
 	dockerClient *docker.Client
+	version      string
 }
 
 var (
+	exporterInfoDesc = prometheus.NewDesc(
+		"docker_exporter_info",
+		"Information about the docker exporter",
+		[]string{"version"},
+		nil,
+	)
 	containerInfoDesc = prometheus.NewDesc(
 		"docker_container_info",
 		"Container information",
@@ -159,9 +166,10 @@ var (
 	)
 )
 
-func NewDockerCollector(client *docker.Client) *DockerCollector {
+func NewDockerCollector(client *docker.Client, version string) *DockerCollector {
 	return &DockerCollector{
 		dockerClient: client,
+		version:      version,
 	}
 }
 
@@ -170,6 +178,14 @@ func (c *DockerCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *DockerCollector) Collect(ch chan<- prometheus.Metric) {
+	// Export version information
+	ch <- prometheus.MustNewConstMetric(
+		exporterInfoDesc,
+		prometheus.GaugeValue,
+		1,
+		c.version,
+	)
+
 	ctx := context.Background()
 
 	containerInfo, err := c.dockerClient.ListAllRunningContainers(ctx)
@@ -221,8 +237,8 @@ func (c *DockerCollector) Collect(ch chan<- prometheus.Metric) {
 	}
 }
 
-func RegisterCollectorsWithRegistry(cli *docker.Client, reg *prometheus.Registry) {
-	collector := NewDockerCollector(cli)
+func RegisterCollectorsWithRegistry(cli *docker.Client, reg *prometheus.Registry, version string) {
+	collector := NewDockerCollector(cli, version)
 	if reg == nil {
 		prometheus.MustRegister(collector)
 	} else {
