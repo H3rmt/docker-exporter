@@ -10,6 +10,7 @@ The exporter provides the following metrics:
 
 | Metric Name                                      | Type    | Description                                                                                  | Labels                                                        |
 |--------------------------------------------------|---------|----------------------------------------------------------------------------------------------|---------------------------------------------------------------|
+| `docker_exporter_info`                           | Gauge   | Information about the docker exporter                                                        | `version`                                                     |
 | `docker_container_info`                          | Gauge   | Container information                                                                        | `container_id`, `name`, `image_id`, `command`, `network_mode` |
 | `docker_container_name`                          | Gauge   | Name for the container (can be more than one)                                                | `container_id`, `name`                                        |
 | `docker_container_state`                         | Gauge   | Container State (0=created, 1=running, 2=paused, 3=restarting, 4=removing, 5=exited, 6=dead) | `container_id`                                                |

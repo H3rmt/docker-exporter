@@ -18,6 +18,9 @@ import (
 )
 
 var (
+	// Version can be set at build time using -ldflags "-X main.Version=x.y.z"
+	Version = "dev"
+
 	verbose         = kingpin.Flag("verbose", "Verbose mode (enabled debug logs).").Short('v').Default("false").Bool()
 	quiet           = kingpin.Flag("quiet", "Quiet mode (disables info logs).").Short('q').Default("false").Bool()
 	internalMetrics = kingpin.Flag("internal-metrics", "Enable internal metrics.").Default("false").Bool()
@@ -41,11 +44,11 @@ func main() {
 	var reg prometheus.Gatherer
 	if *internalMetrics {
 		reg = prometheus.DefaultGatherer
-		exporter.RegisterCollectorsWithRegistry(dockerClient, nil)
+		exporter.RegisterCollectorsWithRegistry(dockerClient, nil, Version)
 	} else {
 		// Create a custom registry that doesn't include the Go collector, process collector, etc.
 		registry := prometheus.NewRegistry()
-		exporter.RegisterCollectorsWithRegistry(dockerClient, registry)
+		exporter.RegisterCollectorsWithRegistry(dockerClient, registry, Version)
 		// Create a custom registry that doesn't include the Go collector, process collector, etc.
 		reg = registry
 	}
