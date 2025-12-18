@@ -2,56 +2,106 @@ package log
 
 import (
 	"fmt"
-	"io"
-	"log"
+	"log/slog"
 	"os"
 )
 
-var (
-	DebugLogger   *log.Logger
-	WarningLogger *log.Logger
-	InfoLogger    *log.Logger
-	ErrorLogger   *log.Logger
-)
+var logger *slog.Logger
 
 func init() {
-	// By default, debug logging is disabled
-	DebugLogger = log.New(io.Discard, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
-	InfoLogger = log.New(os.Stdout, "INFO:  ", log.Ldate|log.Ltime|log.Lshortfile)
-	WarningLogger = log.New(os.Stderr, "WARN:  ", log.Ldate|log.Ltime|log.Lshortfile)
-	ErrorLogger = log.New(os.Stderr, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile)
+	// Default to text format (logfmt-like) with INFO level
+	handler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+	})
+	logger = slog.New(handler)
+}
+
+// InitLogger initializes the logger with the specified format and verbosity
+func InitLogger(format string, verbose bool, quiet bool) {
+	var handler slog.Handler
+	var level slog.Level
+
+	// Determine log level
+	if verbose {
+		level = slog.LevelDebug
+	} else if quiet {
+		level = slog.LevelWarn
+	} else {
+		level = slog.LevelInfo
+	}
+
+	// Create handler based on format
+	opts := &slog.HandlerOptions{
+		Level: level,
+		AddSource: true,
+	}
+
+	switch format {
+	case "json":
+		handler = slog.NewJSONHandler(os.Stdout, opts)
+	case "logfmt", "text":
+		handler = slog.NewTextHandler(os.Stdout, opts)
+	default:
+		handler = slog.NewTextHandler(os.Stdout, opts)
+	}
+
+	logger = slog.New(handler)
 }
 
 // SetVerbose enables or disables debug logging based on the verbose flag
+// Deprecated: Use InitLogger instead
 func SetVerbose(verbose bool) {
+	// For backward compatibility, reinitialize with current settings
+	var level slog.Level
 	if verbose {
-		DebugLogger.SetOutput(os.Stdout)
+		level = slog.LevelDebug
 	} else {
-		DebugLogger.SetOutput(io.Discard)
+		level = slog.LevelInfo
 	}
+	
+	handler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		Level: level,
+		AddSource: true,
+	})
+	logger = slog.New(handler)
 }
 
+// SetQuiet sets quiet mode
+// Deprecated: Use InitLogger instead
 func SetQuiet(quiet bool) {
+	var level slog.Level
 	if quiet {
-		InfoLogger.SetOutput(io.Discard)
+		level = slog.LevelWarn
 	} else {
-		InfoLogger.SetOutput(os.Stdout)
+		level = slog.LevelInfo
 	}
+	
+	handler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		Level: level,
+		AddSource: true,
+	})
+	logger = slog.New(handler)
 }
 
 func Debug(format string, v ...any) {
-	_ = DebugLogger.Output(2, fmt.Sprintf(format, v...))
+	logger.Debug(fmt.Sprintf(format, v...))
 }
 
 func Info(format string, v ...any) {
-	_ = InfoLogger.Output(2, fmt.Sprintf(format, v...))
+	logger.Info(fmt.Sprintf(format, v...))
 }
 
 func Warning(format string, v ...any) {
-	_ = WarningLogger.Output(2, fmt.Sprintf(format, v...))
+	logger.Warn(fmt.Sprintf(format, v...))
 }
 
 func Error(format string, v ...any) {
-	_ = ErrorLogger.Output(2, fmt.Sprintf(format, v...))
+	logger.Error(fmt.Sprintf(format, v...))
 	os.Exit(1)
+}
+
+// GetStdLogger returns a standard library logger that writes to the slog logger
+// This is useful for libraries that expect a *log.Logger
+func GetStdLogger() *slog.Logger {
+	return logger
 }
