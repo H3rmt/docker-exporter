@@ -117,8 +117,13 @@ func ErrorWith(msg string, args ...any) {
 	os.Exit(1)
 }
 
-// GetStdLogger returns a standard library logger that writes to the slog logger
-// This is useful for libraries that expect a *log.Logger
+// GetSlogLogger returns the underlying slog.Logger instance
+// Use with slog.NewLogLogger() to get a *log.Logger for stdlib compatibility
+func GetSlogLogger() *slog.Logger {
+	return logger
+}
+
+// Deprecated: Use GetSlogLogger instead for clarity
 func GetStdLogger() *slog.Logger {
 	return logger
 }

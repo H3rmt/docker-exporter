@@ -61,7 +61,7 @@ func main() {
 	http.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
 	http.Handle("/status", status.HandleStatus(dockerClient))
 
-	server := &http.Server{Addr: fmt.Sprintf("%s:%s", *address, *port), ErrorLog: slog.NewLogLogger(log.GetStdLogger().Handler(), slog.LevelWarn)}
+	server := &http.Server{Addr: fmt.Sprintf("%s:%s", *address, *port), ErrorLog: slog.NewLogLogger(log.GetSlogLogger().Handler(), slog.LevelWarn)}
 
 	go func() {
 		log.InfoWith("Listening on metrics endpoint", "address", fmt.Sprintf("%s:%s", *address, *port))
