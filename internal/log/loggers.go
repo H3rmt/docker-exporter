@@ -87,16 +87,33 @@ func Debug(format string, v ...any) {
 	logger.Debug(fmt.Sprintf(format, v...))
 }
 
+func DebugWith(msg string, args ...any) {
+	logger.Debug(msg, args...)
+}
+
 func Info(format string, v ...any) {
 	logger.Info(fmt.Sprintf(format, v...))
+}
+
+func InfoWith(msg string, args ...any) {
+	logger.Info(msg, args...)
 }
 
 func Warning(format string, v ...any) {
 	logger.Warn(fmt.Sprintf(format, v...))
 }
 
+func WarningWith(msg string, args ...any) {
+	logger.Warn(msg, args...)
+}
+
 func Error(format string, v ...any) {
 	logger.Error(fmt.Sprintf(format, v...))
+	os.Exit(1)
+}
+
+func ErrorWith(msg string, args ...any) {
+	logger.Error(msg, args...)
 	os.Exit(1)
 }
 

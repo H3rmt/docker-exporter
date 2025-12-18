@@ -190,7 +190,7 @@ func (c *DockerCollector) Collect(ch chan<- prometheus.Metric) {
 
 	containerInfo, err := c.dockerClient.ListAllRunningContainers(ctx)
 	if err != nil {
-		log.Warning("Failed to list running containers: %v", err)
+		log.WarningWith("Failed to list running containers", "error", err)
 	} else {
 		formatContainerInfo(ch, containerInfo)
 		formatContainerNames(ch, containerInfo)
@@ -205,7 +205,7 @@ func (c *DockerCollector) Collect(ch chan<- prometheus.Metric) {
 		id := container.ID
 		inspect, err := c.dockerClient.InspectContainer(ctx, id)
 		if err != nil {
-			log.Warning("Failed to inspect container %s: %v", id, err)
+			log.WarningWith("Failed to inspect container", "error", err, "container_id", id)
 		} else {
 			formatContainerStarted(ch, id, inspect)
 			formatContainerExitCode(ch, id, inspect)
@@ -218,7 +218,7 @@ func (c *DockerCollector) Collect(ch chan<- prometheus.Metric) {
 		id := container.ID
 		stat, err := c.dockerClient.GetContainerStats(ctx, id)
 		if err != nil {
-			log.Warning("Failed to get container stats for container %s: %v", id, err)
+			log.WarningWith("Failed to get container stats", "error", err, "container_id", id)
 		} else {
 			formatContainerPids(ch, id, stat)
 			formatContainerCpuUserMicroSeconds(ch, id, stat)

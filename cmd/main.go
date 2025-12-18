@@ -34,12 +34,17 @@ var (
 func main() {
 	kingpin.Parse()
 	log.InitLogger(*logFormat, *verbose, *quiet)
-	log.Info("Starting Docker Prometheus exporter, uid: %d, gid: %d", os.Getuid(), os.Getgid())
+	log.InfoWith("Starting Docker Prometheus exporter", 
+		"version", Version,
+		"uid", os.Getuid(), 
+		"gid", os.Getgid(),
+		"docker_host", *dockerHost,
+		"log_format", *logFormat)
 
 	// Initialize Docker client and metrics
 	dockerClient, err := docker.NewDockerClient(*dockerHost)
 	if err != nil {
-		log.Error("Failed to create Docker client: %v", err)
+		log.ErrorWith("Failed to create Docker client", "error", err, "docker_host", *dockerHost)
 	}
 
 	var reg prometheus.Gatherer
@@ -59,9 +64,9 @@ func main() {
 	server := &http.Server{Addr: fmt.Sprintf("%s:%s", *address, *port), ErrorLog: slog.NewLogLogger(log.GetStdLogger().Handler(), slog.LevelWarn)}
 
 	go func() {
-		log.Info("Listening on :9100/metrics")
+		log.InfoWith("Listening on metrics endpoint", "address", fmt.Sprintf("%s:%s", *address, *port))
 		if err := server.ListenAndServe(); err != nil {
-			log.Error("HTTP server failed: %v", err)
+			log.ErrorWith("HTTP server failed", "error", err)
 		}
 	}()
 
@@ -73,6 +78,6 @@ func main() {
 	log.Info("Shutting down exporter...")
 	err = server.Close()
 	if err != nil {
-		log.Error("Failed to close HTTP server: %v", err)
+		log.ErrorWith("Failed to close HTTP server", "error", err)
 	}
 }

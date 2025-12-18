@@ -58,7 +58,7 @@ func (client *Client) ListAllRunningContainers(ctx context.Context) ([]Container
 			SizeRootFs:  c.SizeRootFs,
 			SizeRw:      c.SizeRw,
 		}
-		log.Debug("Container: %#v", containerInfos[i])
+		log.DebugWith("Listed container", "container_id", containerInfos[i].ID, "names", containerInfos[i].Names, "state", containerInfos[i].State)
 	}
 	return containerInfos, nil
 }
@@ -81,7 +81,7 @@ func (client *Client) InspectContainer(ctx context.Context, containerID string) 
 		FinishedAt:   parseTimeOrEmpty(inspect.State.FinishedAt),
 		RestartCount: inspect.RestartCount,
 	}
-	log.Debug("Inspect: %s %#v", containerID, cInspect)
+	log.DebugWith("Inspected container", "container_id", containerID, "exit_code", cInspect.ExitCode, "restart_count", cInspect.RestartCount)
 	return cInspect, nil
 }
 
@@ -187,11 +187,11 @@ func (client *Client) GetContainerStats(ctx context.Context, containerID string)
 		} else if ioB.Op == "write" {
 			blockOutputBytes += uint64(ioB.Value)
 		} else {
-			log.Warning("Unknown blkio op: %s", ioB.Op)
+			log.WarningWith("Unknown blkio operation", "operation", ioB.Op, "container_id", containerID)
 		}
 	}
 
-	log.Debug("RecStats: %s %#v", containerID, recStats)
+	log.DebugWith("Retrieved container stats", "container_id", containerID, "pids", recStats.PidsStats.Current, "mem_usage_kib", (recStats.MemoryStats.Usage-recStats.MemoryStats.Stats.InactiveFile)/1024)
 	stat := ContainerStats{
 		PIds:                    recStats.PidsStats.Current,
 		CPUinUserModeMicroSec:   recStats.CpuStats.CpuUsage.UsageInUsermode / 1000,
@@ -207,7 +207,6 @@ func (client *Client) GetContainerStats(ctx context.Context, containerID string)
 		BlockInputBytes:         blockInputBytes,
 		BlockOutputBytes:        blockOutputBytes,
 	}
-	log.Debug("Stats: %s %#v", containerID, stat)
 	return stat, nil
 }
 
