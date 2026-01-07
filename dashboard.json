@@ -24,11 +24,9 @@
   "description": "Docker exporter dashboard \nhttps://github.com/h3rmt/docker-exporter",
   "editable": true,
   "fiscalYearStartMonth": 0,
-  "gnetId": 17138,
   "graphTooltip": 1,
   "id": 15,
   "links": [],
-  "liveNow": false,
   "panels": [
     {
       "datasource": {
@@ -99,7 +97,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": null
+                "value": 0
               }
             ]
           }
@@ -118,6 +116,7 @@
         "graphMode": "none",
         "justifyMode": "center",
         "orientation": "auto",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "last"
@@ -129,7 +128,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "10.4.11",
+      "pluginVersion": "12.1.1",
       "targets": [
         {
           "datasource": {
@@ -194,10 +193,12 @@
           "values": false
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "12.1.1",
       "targets": [
         {
           "datasource": {
@@ -217,6 +218,7 @@
           "useBackend": false
         }
       ],
+      "title": "",
       "transparent": true,
       "type": "piechart"
     },
@@ -237,7 +239,7 @@
             "steps": [
               {
                 "color": "semi-dark-red",
-                "value": null
+                "value": 0
               }
             ]
           }
@@ -256,6 +258,7 @@
         "graphMode": "none",
         "justifyMode": "center",
         "orientation": "auto",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "last"
@@ -267,7 +270,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "10.4.11",
+      "pluginVersion": "12.1.1",
       "targets": [
         {
           "datasource": {
@@ -302,7 +305,7 @@
             "steps": [
               {
                 "color": "dark-yellow",
-                "value": null
+                "value": 0
               }
             ]
           }
@@ -321,6 +324,7 @@
         "graphMode": "none",
         "justifyMode": "center",
         "orientation": "auto",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "last"
@@ -332,7 +336,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "10.4.11",
+      "pluginVersion": "12.1.1",
       "targets": [
         {
           "datasource": {
@@ -367,7 +371,7 @@
             "steps": [
               {
                 "color": "semi-dark-orange",
-                "value": null
+                "value": 0
               }
             ]
           }
@@ -386,6 +390,7 @@
         "graphMode": "none",
         "justifyMode": "center",
         "orientation": "auto",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "last"
@@ -397,7 +402,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "10.4.11",
+      "pluginVersion": "12.1.1",
       "targets": [
         {
           "datasource": {
@@ -446,6 +451,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 12,
             "gradientMode": "opacity",
@@ -478,7 +484,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": null
+                "value": 0
               }
             ]
           }
@@ -501,11 +507,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "desc"
         }
       },
-      "pluginVersion": "9.1.6",
+      "pluginVersion": "12.1.1",
       "targets": [
         {
           "datasource": {
@@ -541,6 +548,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 15,
             "gradientMode": "opacity",
@@ -576,7 +584,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": null
+                "value": 0
               }
             ]
           },
@@ -600,11 +608,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "desc"
         }
       },
-      "pluginVersion": "9.1.6",
+      "pluginVersion": "12.1.1",
       "targets": [
         {
           "datasource": {
@@ -653,6 +662,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 12,
             "gradientMode": "opacity",
@@ -684,7 +694,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": 0
               }
             ]
           }
@@ -707,11 +718,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "desc"
         }
       },
-      "pluginVersion": "9.1.6",
+      "pluginVersion": "12.1.1",
       "targets": [
         {
           "datasource": {
@@ -748,6 +760,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 12,
             "gradientMode": "opacity",
@@ -779,7 +792,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": 0
               }
             ]
           },
@@ -803,11 +817,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "desc"
         }
       },
-      "pluginVersion": "9.1.6",
+      "pluginVersion": "12.1.1",
       "targets": [
         {
           "datasource": {
@@ -842,6 +857,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 12,
             "gradientMode": "none",
@@ -873,7 +889,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": 0
               }
             ]
           },
@@ -897,11 +914,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "desc"
         }
       },
-      "pluginVersion": "9.1.6",
+      "pluginVersion": "12.1.1",
       "targets": [
         {
           "datasource": {
@@ -936,6 +954,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 12,
             "gradientMode": "none",
@@ -967,7 +986,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": 0
               }
             ]
           },
@@ -991,11 +1011,12 @@
           "showLegend": true
         },
         "tooltip": {
+          "hideZeros": false,
           "mode": "multi",
           "sort": "desc"
         }
       },
-      "pluginVersion": "9.1.6",
+      "pluginVersion": "12.1.1",
       "targets": [
         {
           "datasource": {
@@ -1013,55 +1034,59 @@
       "type": "timeseries"
     }
   ],
+  "preload": false,
   "refresh": "30s",
-  "schemaVersion": 39,
+  "schemaVersion": 41,
   "tags": [],
   "templating": {
     "list": [
       {
+        "current": {
+          "text": "10000",
+          "value": "10000"
+        },
         "hide": 2,
         "name": "multi",
         "query": "10000",
-        "skipUrlSync": false,
-        "type": "constant"
-      },
-      {
-        "description": "Use this to extract the last part of IP or hostname",
-        "hide": 2,
-        "name": "ip_regex",
-        "query": "(?:[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.([0-9]{1,3})|([a-zA-Z0-9_.-]+))(?::[0-9]+)?",
-        "skipUrlSync": false,
+        "skipUrlSync": true,
         "type": "constant"
       },
       {
         "current": {
-          "selected": false,
-          "text": "prometheus",
+          "text": "(?:[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.([0-9]{1,3})|([a-zA-Z0-9_.-]+))(?::[0-9]+)?",
+          "value": "(?:[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.([0-9]{1,3})|([a-zA-Z0-9_.-]+))(?::[0-9]+)?"
+        },
+        "description": "Use this to extract the last part of IP or hostname",
+        "hide": 2,
+        "name": "ip_regex",
+        "query": "(?:[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.([0-9]{1,3})|([a-zA-Z0-9_.-]+))(?::[0-9]+)?",
+        "skipUrlSync": true,
+        "type": "constant"
+      },
+      {
+        "allowCustomValue": false,
+        "current": {
+          "text": "prometheus-dev",
           "value": "aedfqmp15kr9cf"
         },
-        "hide": 0,
         "includeAll": false,
         "label": "Source",
-        "multi": false,
         "name": "source",
         "options": [],
         "query": "prometheus",
-        "queryValue": "",
         "refresh": 1,
         "regex": "",
-        "skipUrlSync": false,
         "type": "datasource"
       }
     ]
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-12h",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "",
   "title": "Docker",
   "uid": "cUITC74Vk",
-  "version": 37,
-  "weekStart": ""
+  "version": 42
 }
