@@ -10,9 +10,16 @@ import (
 // DockerCollector implements the prometheus.Collector interface
 type DockerCollector struct {
 	dockerClient *docker.Client
+	version      string
 }
 
 var (
+	exporterInfoDesc = prometheus.NewDesc(
+		"docker_exporter_info",
+		"Information about the docker exporter",
+		[]string{"version"},
+		nil,
+	)
 	containerInfoDesc = prometheus.NewDesc(
 		"docker_container_info",
 		"Container information",
@@ -159,9 +166,10 @@ var (
 	)
 )
 
-func NewDockerCollector(client *docker.Client) *DockerCollector {
+func NewDockerCollector(client *docker.Client, version string) *DockerCollector {
 	return &DockerCollector{
 		dockerClient: client,
+		version:      version,
 	}
 }
 
@@ -170,11 +178,19 @@ func (c *DockerCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *DockerCollector) Collect(ch chan<- prometheus.Metric) {
+	// Export version information
+	ch <- prometheus.MustNewConstMetric(
+		exporterInfoDesc,
+		prometheus.GaugeValue,
+		1,
+		c.version,
+	)
+
 	ctx := context.Background()
 
 	containerInfo, err := c.dockerClient.ListAllRunningContainers(ctx)
 	if err != nil {
-		log.Warning("Failed to list running containers: %v", err)
+		log.WarningWith("Failed to list running containers", "error", err)
 	} else {
 		formatContainerInfo(ch, containerInfo)
 		formatContainerNames(ch, containerInfo)
@@ -189,7 +205,7 @@ func (c *DockerCollector) Collect(ch chan<- prometheus.Metric) {
 		id := container.ID
 		inspect, err := c.dockerClient.InspectContainer(ctx, id)
 		if err != nil {
-			log.Warning("Failed to inspect container %s: %v", id, err)
+			log.WarningWith("Failed to inspect container", "error", err, "container_id", id)
 		} else {
 			formatContainerStarted(ch, id, inspect)
 			formatContainerExitCode(ch, id, inspect)
@@ -202,7 +218,7 @@ func (c *DockerCollector) Collect(ch chan<- prometheus.Metric) {
 		id := container.ID
 		stat, err := c.dockerClient.GetContainerStats(ctx, id)
 		if err != nil {
-			log.Warning("Failed to get container stats for container %s: %v", id, err)
+			log.WarningWith("Failed to get container stats", "error", err, "container_id", id)
 		} else {
 			formatContainerPids(ch, id, stat)
 			formatContainerCpuUserMicroSeconds(ch, id, stat)
@@ -221,8 +237,8 @@ func (c *DockerCollector) Collect(ch chan<- prometheus.Metric) {
 	}
 }
 
-func RegisterCollectorsWithRegistry(cli *docker.Client, reg *prometheus.Registry) {
-	collector := NewDockerCollector(cli)
+func RegisterCollectorsWithRegistry(cli *docker.Client, reg *prometheus.Registry, version string) {
+	collector := NewDockerCollector(cli, version)
 	if reg == nil {
 		prometheus.MustRegister(collector)
 	} else {

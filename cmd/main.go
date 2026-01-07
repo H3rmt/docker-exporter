@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus/client_golang/prometheus"
 	"net/http"
@@ -18,8 +19,12 @@ import (
 )
 
 var (
+	// Version can be set at build time using -ldflags "-X main.Version=x.y.z"
+	Version = "dev"
+
 	verbose         = kingpin.Flag("verbose", "Verbose mode (enabled debug logs).").Short('v').Default("false").Bool()
 	quiet           = kingpin.Flag("quiet", "Quiet mode (disables info logs).").Short('q').Default("false").Bool()
+	logFormat       = kingpin.Flag("log-format", "Log format: 'logfmt' or 'json'.").Default("logfmt").Enum("logfmt", "json", "text")
 	internalMetrics = kingpin.Flag("internal-metrics", "Enable internal metrics.").Default("false").Bool()
 	address         = kingpin.Flag("address", "Address to listen on.").Short('a').Default("0.0.0.0").String()
 	port            = kingpin.Flag("port", "Port to listen on.").Short('p').Default("9100").String()
@@ -28,36 +33,40 @@ var (
 
 func main() {
 	kingpin.Parse()
-	log.SetVerbose(*verbose)
-	log.SetQuiet(*quiet)
-	log.Info("Starting Docker Prometheus exporter, uid: %d, gid: %d", os.Getuid(), os.Getgid())
+	log.InitLogger(*logFormat, *verbose, *quiet)
+	log.InfoWith("Starting Docker Prometheus exporter", 
+		"version", Version,
+		"uid", os.Getuid(), 
+		"gid", os.Getgid(),
+		"docker_host", *dockerHost,
+		"log_format", *logFormat)
 
 	// Initialize Docker client and metrics
 	dockerClient, err := docker.NewDockerClient(*dockerHost)
 	if err != nil {
-		log.Error("Failed to create Docker client: %v", err)
+		log.ErrorWith("Failed to create Docker client", "error", err, "docker_host", *dockerHost)
 	}
 
 	var reg prometheus.Gatherer
 	if *internalMetrics {
 		reg = prometheus.DefaultGatherer
-		exporter.RegisterCollectorsWithRegistry(dockerClient, nil)
+		exporter.RegisterCollectorsWithRegistry(dockerClient, nil, Version)
 	} else {
 		// Create a custom registry that doesn't include the Go collector, process collector, etc.
 		registry := prometheus.NewRegistry()
-		exporter.RegisterCollectorsWithRegistry(dockerClient, registry)
+		exporter.RegisterCollectorsWithRegistry(dockerClient, registry, Version)
 		// Create a custom registry that doesn't include the Go collector, process collector, etc.
 		reg = registry
 	}
 	http.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
 	http.Handle("/status", status.HandleStatus(dockerClient))
 
-	server := &http.Server{Addr: fmt.Sprintf("%s:%s", *address, *port), ErrorLog: log.WarningLogger}
+	server := &http.Server{Addr: fmt.Sprintf("%s:%s", *address, *port), ErrorLog: slog.NewLogLogger(log.GetSlogLogger().Handler(), slog.LevelWarn)}
 
 	go func() {
-		log.Info("Listening on :9100/metrics")
+		log.InfoWith("Listening on metrics endpoint", "address", fmt.Sprintf("%s:%s", *address, *port))
 		if err := server.ListenAndServe(); err != nil {
-			log.Error("HTTP server failed: %v", err)
+			log.ErrorWith("HTTP server failed", "error", err)
 		}
 	}()
 
@@ -69,6 +78,6 @@ func main() {
 	log.Info("Shutting down exporter...")
 	err = server.Close()
 	if err != nil {
-		log.Error("Failed to close HTTP server: %v", err)
+		log.ErrorWith("Failed to close HTTP server", "error", err)
 	}
 }

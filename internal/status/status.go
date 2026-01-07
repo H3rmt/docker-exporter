@@ -24,7 +24,7 @@ func HandleStatus(cli *docker.Client) http.Handler {
 		// Check if Docker daemon is responding
 		err := cli.Ping(r.Context())
 		if err != nil {
-			log.Error("Docker daemon is not responding: %v", err)
+			log.ErrorWith("Docker daemon is not responding", "error", err)
 			response.Status = "unhealthy"
 			response.Error = err.Error()
 			w.WriteHeader(http.StatusServiceUnavailable)

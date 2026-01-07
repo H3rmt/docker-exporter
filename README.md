@@ -5,12 +5,15 @@ for Docker containers instead of Podman containers. It exports Docker container 
 
 Grafana dashboard is available at [dashboard.json](./dashboard.json)
 
+Grafana dashboard is available at [dashboard.json](./dashboard.json)
+
 ## Exported Metrics
 
 The exporter provides the following metrics:
 
 | Metric Name                                      | Type    | Description                                                                                  | Labels                                                        |
 |--------------------------------------------------|---------|----------------------------------------------------------------------------------------------|---------------------------------------------------------------|
+| `docker_exporter_info`                           | Gauge   | Information about the docker exporter                                                        | `version`                                                     |
 | `docker_container_info`                          | Gauge   | Container information                                                                        | `container_id`, `name`, `image_id`, `command`, `network_mode` |
 | `docker_container_name`                          | Gauge   | Name for the container (can be more than one)                                                | `container_id`, `name`                                        |
 | `docker_container_state`                         | Gauge   | Container State (0=created, 1=running, 2=paused, 3=restarting, 4=removing, 5=exited, 6=dead) | `container_id`                                                |
@@ -50,20 +53,47 @@ The exporter provides the following metrics:
 # Enable verbose logging
 ./docker-exporter --verbose
 
+# Use JSON log format
+./docker-exporter --log-format=json
+
+# Use logfmt log format (default)
+./docker-exporter --log-format=logfmt
+
 # Enable internal metrics
 ./docker-exporter --internal-metrics
 ```
 
 ### Command-line options
 
-| Option                | Description                           | Default                       |
-|-----------------------|---------------------------------------|-------------------------------|
-| `--verbose`, `-v`     | Enable verbose mode (debug logs)      | `false`                       |
-| `--quiet`, `-q`       | Enable quiet mode (disable info logs) | `false`                       |
-| `--internal-metrics`  | Enable internal metrics               | `false`                       |
-| `--address`, `-a`     | Address to listen on                  | `0.0.0.0`                     |
-| `--port`, `-p`        | Port to listen on                     | `9100`                        |
-| `--docker-host`, `-d` | Host to connect to                    | `unix:///var/run/docker.sock` |
+| Option                | Description                                   | Default                       |
+|-----------------------|-----------------------------------------------|-------------------------------|
+| `--verbose`, `-v`     | Enable verbose mode (debug logs)              | `false`                       |
+| `--quiet`, `-q`       | Enable quiet mode (disable info logs)         | `false`                       |
+| `--log-format`        | Log format: 'logfmt', 'json', or 'text'       | `logfmt`                      |
+| `--internal-metrics`  | Enable internal metrics                       | `false`                       |
+| `--address`, `-a`     | Address to listen on                          | `0.0.0.0`                     |
+| `--port`, `-p`        | Port to listen on                             | `9100`                        |
+| `--docker-host`, `-d` | Host to connect to                            | `unix:///var/run/docker.sock` |
+
+### Logging
+
+The exporter uses structured logging with support for multiple output formats:
+
+- **logfmt** (default): Human-readable key-value format, compatible with log aggregation tools like Grafana Alloy
+- **json**: JSON-formatted logs for easy parsing and integration with log processing systems
+- **text**: Alternative name for logfmt format
+
+Logs include contextual information such as container IDs, error details, and operation metadata. Use `--verbose` to enable debug-level logs with additional details about container operations.
+
+Example logfmt output:
+```
+time=2025-12-18T17:12:19.779Z level=INFO msg="Starting Docker Prometheus exporter" version=dev uid=1001 gid=1001 docker_host=unix:///var/run/docker.sock
+```
+
+Example JSON output:
+```json
+{"time":"2025-12-18T17:12:27.549Z","level":"INFO","msg":"Starting Docker Prometheus exporter","version":"dev","uid":1001,"gid":1001,"docker_host":"unix:///var/run/docker.sock"}
+```
 
 ### Endpoints
 
