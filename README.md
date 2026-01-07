@@ -5,8 +5,6 @@ for Docker containers instead of Podman containers. It exports Docker container 
 
 Grafana dashboard is available at [dashboard.json](./dashboard.json)
 
-Grafana dashboard is available at [dashboard.json](./dashboard.json)
-
 ## Exported Metrics
 
 The exporter provides the following metrics:
@@ -81,7 +79,6 @@ The exporter uses structured logging with support for multiple output formats:
 
 - **logfmt** (default): Human-readable key-value format, compatible with log aggregation tools like Grafana Alloy
 - **json**: JSON-formatted logs for easy parsing and integration with log processing systems
-- **text**: Alternative name for logfmt format
 
 Logs include contextual information such as container IDs, error details, and operation metadata. Use `--verbose` to enable debug-level logs with additional details about container operations.
 

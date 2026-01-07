@@ -39,7 +39,7 @@ func InitLogger(format string, verbose bool, quiet bool) {
 	switch format {
 	case "json":
 		handler = slog.NewJSONHandler(os.Stdout, opts)
-	case "logfmt", "text":
+	case "logfmt":
 		handler = slog.NewTextHandler(os.Stdout, opts)
 	default:
 		handler = slog.NewTextHandler(os.Stdout, opts)
@@ -120,10 +120,5 @@ func ErrorWith(msg string, args ...any) {
 // GetSlogLogger returns the underlying slog.Logger instance
 // Use with slog.NewLogLogger() to get a *log.Logger for stdlib compatibility
 func GetSlogLogger() *slog.Logger {
-	return logger
-}
-
-// Deprecated: Use GetSlogLogger instead for clarity
-func GetStdLogger() *slog.Logger {
 	return logger
 }
