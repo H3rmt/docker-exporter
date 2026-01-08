@@ -3,17 +3,19 @@ package main
 import (
 	"fmt"
 	"log/slog"
-	"github.com/alecthomas/kingpin/v2"
-	"github.com/prometheus/client_golang/prometheus"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"docker-exporter/internal/docker"
-	"docker-exporter/internal/exporter"
-	"docker-exporter/internal/log"
-	"docker-exporter/internal/status"
+	"github.com/alecthomas/kingpin/v2"
+	"github.com/prometheus/client_golang/prometheus"
+
+	"github.com/h3rmt/docker-exporter/internal/docker"
+	"github.com/h3rmt/docker-exporter/internal/exporter"
+	"github.com/h3rmt/docker-exporter/internal/log"
+	"github.com/h3rmt/docker-exporter/internal/status"
+	"github.com/h3rmt/docker-exporter/internal/web"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -34,9 +36,9 @@ var (
 func main() {
 	kingpin.Parse()
 	log.InitLogger(*logFormat, *verbose, *quiet)
-	log.InfoWith("Starting Docker Prometheus exporter", 
+	log.GetLogger().Info("Starting Docker Prometheus exporter",
 		"version", Version,
-		"uid", os.Getuid(), 
+		"uid", os.Getuid(),
 		"gid", os.Getgid(),
 		"docker_host", *dockerHost,
 		"log_format", *logFormat)
@@ -44,8 +46,10 @@ func main() {
 	// Initialize Docker client and metrics
 	dockerClient, err := docker.NewDockerClient(*dockerHost)
 	if err != nil {
-		log.ErrorWith("Failed to create Docker client", "error", err, "docker_host", *dockerHost)
+		log.GetLogger().Error("Failed to create Docker client", "error", err, "docker_host", *dockerHost)
+		os.Exit(1)
 	}
+	log.GetLogger().Debug("Docker client created", "docker_host", *dockerHost)
 
 	var reg prometheus.Gatherer
 	if *internalMetrics {
@@ -58,15 +62,28 @@ func main() {
 		// Create a custom registry that doesn't include the Go collector, process collector, etc.
 		reg = registry
 	}
+	log.GetLogger().Debug("Metrics registered")
+
 	http.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
 	http.Handle("/status", status.HandleStatus(dockerClient))
-
-	server := &http.Server{Addr: fmt.Sprintf("%s:%s", *address, *port), ErrorLog: slog.NewLogLogger(log.GetSlogLogger().Handler(), slog.LevelWarn)}
+	// Web UI and API
+	http.HandleFunc("/", web.HandleRoot())
+	http.HandleFunc("/api/info", web.HandleAPIInfo(Version))
+	http.HandleFunc("/api/usage", web.HandleAPIUsage())
+	http.Handle("/api/containers", web.HandleAPIContainers(dockerClient))
 
 	go func() {
-		log.InfoWith("Listening on metrics endpoint", "address", fmt.Sprintf("%s:%s", *address, *port))
+		web.CollectInBg()
+		log.GetLogger().Debug("Metrics in background collector stopped")
+	}()
+
+	server := &http.Server{Addr: fmt.Sprintf("%s:%s", *address, *port), ErrorLog: slog.NewLogLogger(log.GetLogger().Handler(), slog.LevelWarn)}
+	log.GetLogger().Debug("HTTP server created")
+	go func() {
+		log.GetLogger().Info("Listening on metrics endpoint", "address", fmt.Sprintf("%s:%s", *address, *port))
 		if err := server.ListenAndServe(); err != nil {
-			log.ErrorWith("HTTP server failed", "error", err)
+			log.GetLogger().Error("HTTP server failed", "error", err)
+			os.Exit(1)
 		}
 	}()
 
@@ -75,9 +92,11 @@ func main() {
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 	<-sig
 
-	log.Info("Shutting down exporter...")
+	web.StopCollect()
+	log.GetLogger().Info("Shutting down exporter...")
 	err = server.Close()
 	if err != nil {
-		log.ErrorWith("Failed to close HTTP server", "error", err)
+		log.GetLogger().Error("Failed to close HTTP server", "error", err)
+		os.Exit(1)
 	}
 }

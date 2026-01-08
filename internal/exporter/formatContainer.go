@@ -1,10 +1,11 @@
 package exporter
 
 import (
-	"docker-exporter/internal/docker"
-	"github.com/docker/docker/api/types/container"
-	"github.com/prometheus/client_golang/prometheus"
+	"github.com/h3rmt/docker-exporter/internal/docker"
 	"strconv"
+
+	"github.com/moby/moby/api/types/container"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 func formatContainerInfo(ch chan<- prometheus.Metric, containerInfo []docker.ContainerInfo) {
@@ -85,7 +86,7 @@ func formatContainerPorts(ch chan<- prometheus.Metric, containerInfo []docker.Co
 				c.ID,
 				strconv.Itoa(int(port.PublicPort)),
 				strconv.Itoa(int(port.PrivatePort)),
-				port.IP,
+				port.IP.String(),
 				port.Type,
 			)
 		}

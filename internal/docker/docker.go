@@ -2,11 +2,14 @@ package docker
 
 import (
 	"context"
-	"docker-exporter/internal/log"
 	"encoding/json"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/client"
+	"io"
 	"time"
+
+	"github.com/h3rmt/docker-exporter/internal/log"
+
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/client"
 )
 
 type Client struct {
@@ -14,9 +17,9 @@ type Client struct {
 }
 
 func NewDockerClient(host string) (*Client, error) {
-	c, err := client.NewClientWithOpts(
+	c, err := client.New(
 		client.WithHost(host),
-		client.WithAPIVersionNegotiation(),
+		client.WithUserAgent("docker-exporter"),
 	)
 	if err != nil {
 		return nil, err
@@ -31,7 +34,7 @@ type ContainerInfo struct {
 	Names       []string
 	ImageID     string
 	Command     string
-	Ports       []container.Port
+	Ports       []container.PortSummary
 	NetworkMode string
 	Created     int64
 	State       container.ContainerState
@@ -39,16 +42,27 @@ type ContainerInfo struct {
 	SizeRw      int64
 }
 
-func (client *Client) ListAllRunningContainers(ctx context.Context) ([]ContainerInfo, error) {
-	containers, err := client.client.ContainerList(ctx, container.ListOptions{All: true, Size: true})
+func (c *Client) ListAllRunningContainers(ctx context.Context) ([]ContainerInfo, error) {
+	containers, err := c.client.ContainerList(ctx, client.ContainerListOptions{
+		All: true, Size: false,
+	})
 	if err != nil {
 		return nil, err
 	}
-	containerInfos := make([]ContainerInfo, len(containers))
-	for i, c := range containers {
+	containerInfos := make([]ContainerInfo, len(containers.Items))
+	for i, c := range containers.Items {
+
+		names := make([]string, len(c.Names))
+		for j, name := range c.Names {
+			if len(name) > 0 && name[0] == '/' {
+				names[j] = name[1:]
+			} else {
+				names[j] = name
+			}
+		}
 		containerInfos[i] = ContainerInfo{
 			ID:          c.ID,
-			Names:       c.Names,
+			Names:       names,
 			ImageID:     c.ImageID,
 			Command:     c.Command,
 			Ports:       c.Ports,
@@ -58,7 +72,7 @@ func (client *Client) ListAllRunningContainers(ctx context.Context) ([]Container
 			SizeRootFs:  c.SizeRootFs,
 			SizeRw:      c.SizeRw,
 		}
-		log.DebugWith("Listed container", "container_id", containerInfos[i].ID, "names", containerInfos[i].Names, "state", containerInfos[i].State)
+		log.GetLogger().DebugContext(ctx, "Listed container", "container_id", containerInfos[i].ID, "names", containerInfos[i].Names, "state", containerInfos[i].State)
 	}
 	return containerInfos, nil
 }
@@ -70,18 +84,20 @@ type ContainerInspect struct {
 	RestartCount int
 }
 
-func (client *Client) InspectContainer(ctx context.Context, containerID string) (ContainerInspect, error) {
-	inspect, err := client.client.ContainerInspect(ctx, containerID)
+func (c *Client) InspectContainer(ctx context.Context, containerID string) (ContainerInspect, error) {
+	inspect, err := c.client.ContainerInspect(ctx, containerID, client.ContainerInspectOptions{
+		Size: false,
+	})
 	if err != nil {
 		return ContainerInspect{}, err
 	}
 	cInspect := ContainerInspect{
-		ExitCode:     inspect.State.ExitCode,
-		StartedAt:    parseTimeOrEmpty(inspect.State.StartedAt),
-		FinishedAt:   parseTimeOrEmpty(inspect.State.FinishedAt),
-		RestartCount: inspect.RestartCount,
+		ExitCode:     inspect.Container.State.ExitCode,
+		StartedAt:    parseTimeOrEmpty(inspect.Container.State.StartedAt),
+		FinishedAt:   parseTimeOrEmpty(inspect.Container.State.FinishedAt),
+		RestartCount: inspect.Container.RestartCount,
 	}
-	log.DebugWith("Inspected container", "container_id", containerID, "exit_code", cInspect.ExitCode, "restart_count", cInspect.RestartCount)
+	log.GetLogger().DebugContext(ctx, "Inspected container", "container_id", containerID, "exit_code", cInspect.ExitCode, "restart_count", cInspect.RestartCount)
 	return cInspect, nil
 }
 
@@ -152,12 +168,20 @@ type recStats struct {
 	} `json:"networks"`
 }
 
-func (client *Client) GetContainerStats(ctx context.Context, containerID string) (ContainerStats, error) {
-	stats, err := client.client.ContainerStatsOneShot(ctx, containerID)
+func (c *Client) GetContainerStats(ctx context.Context, containerID string) (ContainerStats, error) {
+	stats, err := c.client.ContainerStats(ctx, containerID, client.ContainerStatsOptions{
+		Stream:                false,
+		IncludePreviousSample: false,
+	})
 	if err != nil {
 		return ContainerStats{}, err
 	}
-	defer stats.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			log.GetLogger().ErrorContext(ctx, "Failed to close container stats reader", "error", err)
+		}
+	}(stats.Body)
 
 	var recStats recStats
 	err = json.NewDecoder(stats.Body).Decode(&recStats)
@@ -187,11 +211,11 @@ func (client *Client) GetContainerStats(ctx context.Context, containerID string)
 		} else if ioB.Op == "write" {
 			blockOutputBytes += uint64(ioB.Value)
 		} else {
-			log.WarningWith("Unknown blkio operation", "operation", ioB.Op, "container_id", containerID)
+			log.GetLogger().WarnContext(ctx, "Unknown blkio operation", "operation", ioB.Op, "container_id", containerID)
 		}
 	}
 
-	log.DebugWith("Retrieved container stats", "container_id", containerID, "pids", recStats.PidsStats.Current, "mem_usage_kib", (recStats.MemoryStats.Usage-recStats.MemoryStats.Stats.InactiveFile)/1024)
+	log.GetLogger().DebugContext(ctx, "Retrieved container stats", "container_id", containerID, "pids", recStats.PidsStats.Current, "mem_usage_kib", (recStats.MemoryStats.Usage-recStats.MemoryStats.Stats.InactiveFile)/1024)
 	stat := ContainerStats{
 		PIds:                    recStats.PidsStats.Current,
 		CPUinUserModeMicroSec:   recStats.CpuStats.CpuUsage.UsageInUsermode / 1000,
@@ -210,7 +234,10 @@ func (client *Client) GetContainerStats(ctx context.Context, containerID string)
 	return stat, nil
 }
 
-func (client *Client) Ping(ctx context.Context) error {
-	_, err := client.client.Ping(ctx)
-	return err
+func (c *Client) Ping(ctx context.Context) (string, error) {
+	data, err := c.client.Ping(ctx, client.PingOptions{})
+	if err != nil {
+		return "", err
+	}
+	return data.APIVersion, nil
 }

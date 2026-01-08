@@ -1,7 +1,6 @@
 package log
 
 import (
-	"fmt"
 	"log/slog"
 	"os"
 )
@@ -32,7 +31,7 @@ func InitLogger(format string, verbose bool, quiet bool) {
 
 	// Create handler based on format
 	opts := &slog.HandlerOptions{
-		Level: level,
+		Level:     level,
 		AddSource: true,
 	}
 
@@ -48,77 +47,8 @@ func InitLogger(format string, verbose bool, quiet bool) {
 	logger = slog.New(handler)
 }
 
-// SetVerbose enables or disables debug logging based on the verbose flag
-// Deprecated: Use InitLogger instead
-func SetVerbose(verbose bool) {
-	// For backward compatibility, reinitialize with current settings
-	var level slog.Level
-	if verbose {
-		level = slog.LevelDebug
-	} else {
-		level = slog.LevelInfo
-	}
-	
-	handler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-		Level: level,
-		AddSource: true,
-	})
-	logger = slog.New(handler)
-}
-
-// SetQuiet sets quiet mode
-// Deprecated: Use InitLogger instead
-func SetQuiet(quiet bool) {
-	var level slog.Level
-	if quiet {
-		level = slog.LevelWarn
-	} else {
-		level = slog.LevelInfo
-	}
-	
-	handler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-		Level: level,
-		AddSource: true,
-	})
-	logger = slog.New(handler)
-}
-
-func Debug(format string, v ...any) {
-	logger.Debug(fmt.Sprintf(format, v...))
-}
-
-func DebugWith(msg string, args ...any) {
-	logger.Debug(msg, args...)
-}
-
-func Info(format string, v ...any) {
-	logger.Info(fmt.Sprintf(format, v...))
-}
-
-func InfoWith(msg string, args ...any) {
-	logger.Info(msg, args...)
-}
-
-func Warning(format string, v ...any) {
-	logger.Warn(fmt.Sprintf(format, v...))
-}
-
-func WarningWith(msg string, args ...any) {
-	logger.Warn(msg, args...)
-}
-
-func Error(format string, v ...any) {
-	logger.Error(fmt.Sprintf(format, v...))
-	os.Exit(1)
-}
-
-func ErrorWith(msg string, args ...any) {
-	logger.Error(msg, args...)
-	os.Exit(1)
-}
-
-// GetSlogLogger returns the underlying slog.Logger instance
+// GetLogger returns the underlying slog.Logger instance
 // Use with slog.NewLogLogger() to get a *log.Logger for stdlib compatibility
-func GetSlogLogger() *slog.Logger {
+func GetLogger() *slog.Logger {
 	return logger
 }

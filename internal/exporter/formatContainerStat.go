@@ -1,7 +1,7 @@
 package exporter
 
 import (
-	"docker-exporter/internal/docker"
+	"github.com/h3rmt/docker-exporter/internal/docker"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
