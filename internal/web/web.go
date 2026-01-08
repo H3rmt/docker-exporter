@@ -13,14 +13,19 @@ func HandleRoot() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		dataPoints := GetData()
 		log.GetLogger().Debug("data points", "dataPoints", len(dataPoints))
+		_, _, totalMem, err := readMemInfo()
+		if err != nil {
+			log.GetLogger().Error("failed to read mem info", "error", err)
+		}
 
 		// Prepare initial data as JSON
 		type chartData struct {
-			Labels      []string  `json:"labels"`
-			CPUData     []float64 `json:"cpuData"`
-			CPUDataUser []float64 `json:"cpuDataUser"`
-			CPUDataSys  []float64 `json:"cpuDataSys"`
-			MemData     []float64 `json:"memData"`
+			Labels      []string
+			CPUData     []float64
+			CPUDataUser []float64
+			CPUDataSys  []float64
+			MemData     []float64
+			TotalMem    uint64
 		}
 
 		cd := chartData{
@@ -29,6 +34,7 @@ func HandleRoot() http.HandlerFunc {
 			CPUDataUser: make([]float64, 0),
 			CPUDataSys:  make([]float64, 0),
 			MemData:     make([]float64, 0),
+			TotalMem:    totalMem / 1024, // turn into KiB
 		}
 
 		for i := range dataPoints {
@@ -61,7 +67,7 @@ const pageTemplate = `<!doctype html>
 	h3 { margin:0; }
 	h1 { margin:0; }
 
-	.header { display:flex; gap:1rem; justify-content:space-between; }
+	.header { display:flex; gap:1rem; justify-content:space-between; align-items: center; }
 	.header-right { display:flex; align-items:end; gap: 12px; flex-direction: column; justify-content: center; }
 
 	.card { border: 1px solid light-dark(#ddd, #373737); border-radius: 8px; padding: 10px; box-shadow: 0 0 10px 1px light-dark(rgba(0 0 0 / 15%), rgb(200 200 200 / 15%)); display: flex; flex-direction: column; min-height: 30vh; max-height: 45vh; flex: 1 }
@@ -75,9 +81,9 @@ const pageTemplate = `<!doctype html>
     th { background: light-dark(#eeeeee, #282828); position: sticky; top: 0; }
     code { background: light-dark(#e1e1e1, #373737); padding:2px 4px; border-radius:4px; }
 
-    .status { padding:2px 6px; border-radius: 10px; font-size: 12px; }
-    .running { background:#e6ffed; color:#036400; }
-    .exited { background:#ffeaea; color:#8a0000; }
+	.status { padding:2px 6px; border-radius: 10px; font-size: 12px; }
+	.running { background:light-dark(#e6ffed, #1a3d1a); color:light-dark(#036400, #4ade80); }
+	.exited { background:light-dark(#ffeaea, #3d1a1a); color:light-dark(#8a0000, #f87171); }
   </style>
  </head>
 <body>
@@ -96,14 +102,14 @@ const pageTemplate = `<!doctype html>
         <div class="chart-container"><canvas id="cpuChart"></canvas></div>
     </div></div>
     <div class="card-container"><div class="card">
-        <h3>Memory Utilization</h3>
+        <h3>Memory Utilization (<span id="totalMem"></span>)</h3>
         <div class="chart-container"><canvas id="memChart"></canvas></div>
     </div></div>
   </div>
 
   <div class="card">
 	  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
-        <h3 style="margin:0;">Containers</h3>
+        <h3 style="margin:0;">Containers</h3>f
         <button id="updateBtn" style="background:#2563eb; color:white; border:none; padding:6px 12px; border-radius:6px; font-size:14px; cursor:pointer; font-family:inherit;">Update</button>
 	  </div>
 	  <div style="overflow-y:scroll;">
@@ -180,21 +186,21 @@ const cpuChart = new Chart(cpuCtx, {
 			label: 'CPU %',
 			data: cpuData,
 			borderColor: '#3b82f6',
-			backgroundColor: 'rgba(59,130,246,0.2)',
+			backgroundColor: 'rgba(59,130,246,0.15)',
 			fill: true,
 			tension: 0.25
 		}, {
 			label: 'CPU % (User)',
 			data: cpuDataUser,
 			borderColor: '#8b5cf6',
-			backgroundColor: 'rgba(139,92,246,0.2)',
+			backgroundColor: 'rgba(139,92,246,0.15)',
 			fill: false,
 			tension: 0.25
 		}, {
 			label: 'CPU % (System)',
 			data: cpuDataSystem,
 			borderColor: '#06b6d4',
-			backgroundColor: 'rgba(6,182,212,0.2)',
+			backgroundColor: 'rgba(6,182,212,0.15)',
 			fill: false,
 			tension: 0.25
 		} ]
@@ -333,6 +339,7 @@ document.getElementById('updateBtn').addEventListener('click', loadContainers);
 // remove flex: 1 css attribute from cards
 const cards = Array.from(document.getElementsByClassName('card-container'));
 cards.map((i) => i.classList.replace("card-container", "card-container-no-flex"))
+document.getElementById('totalMem').innerText = fmtBytesKiB({{.TotalMem}});
 </script>
 </body>
 </html>`

@@ -149,4 +149,6 @@ services:
       - "9100:9100"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /etc/hostname:/etc/hostname:ro
+    
 ```

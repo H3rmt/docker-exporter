@@ -7,7 +7,7 @@ import (
 )
 
 func readMemPercent() (float64, error) {
-	total, avail, err := readMemInfo()
+	total, avail, _, err := readMemInfo()
 	if err != nil {
 		return 0, err
 	}
@@ -18,12 +18,12 @@ func readMemPercent() (float64, error) {
 	return (float64(used) / float64(total)) * 100.0, nil
 }
 
-func readMemInfo() (uint64, uint64, error) {
+func readMemInfo() (uint64, uint64, uint64, error) {
 	mem, err := linuxproc.ReadMemInfo("/proc/meminfo")
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, 0, err
 	}
-	return mem.MemTotal * 1024, mem.MemAvailable * 1024, nil
+	return mem.MemTotal * 1024, mem.MemAvailable * 1024, mem.MemTotal * 1024, nil
 }
 
 // readCPUPercent computes a short-sampled CPU usage percent using /proc/stat

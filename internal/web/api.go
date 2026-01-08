@@ -18,8 +18,9 @@ type infoResponse struct {
 
 func HandleAPIInfo(version string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		hn, _ := os.Hostname()
-		writeJSON(w, infoResponse{Hostname: hn, Version: version})
+		hn, _ := os.ReadFile("/etc/hostname")
+		hostname := strings.TrimSpace(string(hn))
+		writeJSON(w, infoResponse{Hostname: hostname, Version: version})
 	}
 }
 
