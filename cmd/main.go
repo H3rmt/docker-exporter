@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus/client_golang/prometheus"
@@ -24,13 +25,14 @@ var (
 	// Version can be set at build time using -ldflags "-X main.Version=x.y.z"
 	Version = "dev"
 
-	verbose         = kingpin.Flag("verbose", "Verbose mode (enabled debug logs).").Short('v').Default("false").Bool()
-	quiet           = kingpin.Flag("quiet", "Quiet mode (disables info logs).").Short('q').Default("false").Bool()
-	logFormat       = kingpin.Flag("log-format", "Log format: 'logfmt' or 'json'.").Default("logfmt").Enum("logfmt", "json")
-	internalMetrics = kingpin.Flag("internal-metrics", "Enable internal metrics.").Default("false").Bool()
-	address         = kingpin.Flag("address", "Address to listen on.").Short('a').Default("0.0.0.0").String()
-	port            = kingpin.Flag("port", "Port to listen on.").Short('p').Default("9100").String()
-	dockerHost      = kingpin.Flag("docker-host", "Host to connect to.").Short('d').Default("unix:///var/run/docker.sock").String()
+	verbose          = kingpin.Flag("verbose", "Verbose mode (enabled debug logs).").Short('v').Default("false").Bool()
+	quiet            = kingpin.Flag("quiet", "Quiet mode (disables info logs).").Short('q').Default("false").Bool()
+	logFormat        = kingpin.Flag("log-format", "Log format: 'logfmt' or 'json'.").Default("logfmt").Enum("logfmt", "json")
+	internalMetrics  = kingpin.Flag("internal-metrics", "Enable internal go metrics.").Default("false").Bool()
+	address          = kingpin.Flag("address", "Address to listen on.").Short('a').Default("0.0.0.0").String()
+	secondsCacheSize = kingpin.Flag("size-cache-seconds", "Seconds to wait before refreshing container size cache.").Default("300").Int()
+	port             = kingpin.Flag("port", "Port to listen on.").Short('p').Default("9100").String()
+	dockerHost       = kingpin.Flag("docker-host", "Host to connect to.").Short('d').Default("unix:///var/run/docker.sock").String()
 )
 
 func main() {
@@ -41,7 +43,9 @@ func main() {
 		"uid", os.Getuid(),
 		"gid", os.Getgid(),
 		"docker_host", *dockerHost,
-		"log_format", *logFormat)
+		"log_format", *logFormat,
+	)
+	docker.SetSizeCacheSeconds(time.Duration(*secondsCacheSize) * time.Second)
 
 	// Initialize Docker client and metrics
 	dockerClient, err := docker.NewDockerClient(*dockerHost)
@@ -49,8 +53,8 @@ func main() {
 		log.GetLogger().Error("Failed to create Docker client", "error", err, "docker_host", *dockerHost)
 		os.Exit(1)
 	}
-	log.GetLogger().Debug("Docker client created", "docker_host", *dockerHost)
 
+	log.GetLogger().Info("Collecting initial metrics...")
 	var reg prometheus.Gatherer
 	if *internalMetrics {
 		reg = prometheus.DefaultGatherer
@@ -62,7 +66,6 @@ func main() {
 		// Create a custom registry that doesn't include the Go collector, process collector, etc.
 		reg = registry
 	}
-	log.GetLogger().Debug("Metrics registered")
 
 	http.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
 	http.Handle("/status", status.HandleStatus(dockerClient))
@@ -78,7 +81,7 @@ func main() {
 	}()
 
 	server := &http.Server{Addr: fmt.Sprintf("%s:%s", *address, *port), ErrorLog: slog.NewLogLogger(log.GetLogger().Handler(), slog.LevelWarn)}
-	log.GetLogger().Debug("HTTP server created")
+	log.GetLogger().Info("HTTP server created")
 	go func() {
 		log.GetLogger().Info("Listening on metrics endpoint", "address", fmt.Sprintf("%s:%s", *address, *port))
 		if err := server.ListenAndServe(); err != nil {

@@ -54,6 +54,8 @@ const pageTemplate = `<!doctype html>
   <title>Docker Exporter</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js" integrity="sha256-SERKgtTty1vsDxll+qzd4Y2cF9swY9BCq62i9wXJ9Uo=" crossorigin="anonymous"></script>
   <style>
+	:root { color-scheme: light dark; }
+	html { background-color: light-dark(#ffffff, #0e0e0e); color: light-dark(#292524, #f5f5f4); }
 	body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; display: flex; flex-direction: column; margin: 0; height: 100dvh; width: 100vw; }
 	main { padding: 10px 20px 20px; flex: 1; display: flex; flex-direction: column; gap: 1rem; overflow: auto; }
 	h3 { margin:0; }
@@ -62,16 +64,16 @@ const pageTemplate = `<!doctype html>
 	.header { display:flex; gap:1rem; justify-content:space-between; }
 	.header-right { display:flex; align-items:end; gap: 12px; flex-direction: column; justify-content: center; }
 
-	.card { border: 1px solid #ddd; border-radius: 8px; padding: 10px; box-shadow: 0 0 10px 1px rgba(0,0,0,0.15); display: flex; flex-direction: column; min-height: 30vh; max-height: 45vh; flex: 1 }
+	.card { border: 1px solid light-dark(#ddd, #373737); border-radius: 8px; padding: 10px; box-shadow: 0 0 10px 1px light-dark(rgba(0 0 0 / 15%), rgb(200 200 200 / 15%)); display: flex; flex-direction: column; min-height: 30vh; max-height: 45vh; flex: 1 }
 	.card-container { flex: 1; display: flex; }
 	.card-container-no-flex { display: flex; justify-content: center }
 
 	.chart-container { flex: 1; overflow: auto; }
 
 	table { width:100%; border-collapse: collapse; }
-	th, td { padding: 8px; border-bottom: 1px solid #eee; text-align: left; }
-    th { background: #fafafa; position: sticky; top: 0; }
-    code { background:#f5f5f5; padding:2px 4px; border-radius:4px; }
+	th, td { padding: 8px; border-bottom: 1px solid light-dark(#ddd, #373737); text-align: left; }
+    th { background: light-dark(#eeeeee, #282828); position: sticky; top: 0; }
+    code { background: light-dark(#e1e1e1, #373737); padding:2px 4px; border-radius:4px; }
 
     .status { padding:2px 6px; border-radius: 10px; font-size: 12px; }
     .running { background:#e6ffed; color:#036400; }
@@ -169,6 +171,7 @@ console.log(cpuDataUser);
 console.log(cpuDataSystem);
 console.log(memData);
 
+Chart.defaults.color = window.getComputedStyle(document.body).color;
 const cpuChart = new Chart(cpuCtx, { 
     type:'line',
 	data: {

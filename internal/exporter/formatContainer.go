@@ -1,8 +1,9 @@
 package exporter
 
 import (
-	"github.com/h3rmt/docker-exporter/internal/docker"
 	"strconv"
+
+	"github.com/h3rmt/docker-exporter/internal/docker"
 
 	"github.com/moby/moby/api/types/container"
 	"github.com/prometheus/client_golang/prometheus"
@@ -90,27 +91,5 @@ func formatContainerPorts(ch chan<- prometheus.Metric, containerInfo []docker.Co
 				port.Type,
 			)
 		}
-	}
-}
-
-func formatContainerSizeRootFs(ch chan<- prometheus.Metric, containerInfo []docker.ContainerInfo) {
-	for _, c := range containerInfo {
-		ch <- prometheus.MustNewConstMetric(
-			containerSizeRootFsDesc,
-			prometheus.GaugeValue,
-			float64(c.SizeRootFs),
-			c.ID,
-		)
-	}
-}
-
-func formatContainerSizeRw(ch chan<- prometheus.Metric, containerInfo []docker.ContainerInfo) {
-	for _, c := range containerInfo {
-		ch <- prometheus.MustNewConstMetric(
-			containerSizeRwDesc,
-			prometheus.GaugeValue,
-			float64(c.SizeRw),
-			c.ID,
-		)
 	}
 }

@@ -1,6 +1,7 @@
 # Docker Prometheus Exporter
 
-This project is similar to [prometheus-podman-exporter](https://github.com/containers/prometheus-podman-exporter), but for Docker containers instead of Podman containers. It exports Docker container metrics in Prometheus format.
+This project is similar to [prometheus-podman-exporter](https://github.com/containers/prometheus-podman-exporter), but for Docker containers instead of Podman containers.
+It exports Docker container metrics in Prometheus format and also provides a simple homepage with live charts.
 
 Grafana dashboard is available at [dashboard.json](./dashboard.json)
 
@@ -36,6 +37,9 @@ The exporter provides the following metrics:
 | `docker_container_exit_code`                     | Gauge   | Exit code of the container                                                                   | `container_id`                                                |
 | `docker_container_restart_count`                 | Counter | Number of times the container has been restarted                                             | `container_id`                                                |
 
+`docker_container_rootfs_size_bytes` and `docker_container_rw_size_bytes` are cached and only updated every 5 minutes.
+This can be customized with the --size-cache-seconds flag.
+
 ## Usage
 
 ### Running the exporter
@@ -62,15 +66,16 @@ The exporter provides the following metrics:
 
 ### Command-line options
 
-| Option                | Description                                   | Default                       |
-|-----------------------|-----------------------------------------------|-------------------------------|
-| `--verbose`, `-v`     | Enable verbose mode (debug logs)              | `false`                       |
-| `--quiet`, `-q`       | Enable quiet mode (disable info logs)         | `false`                       |
-| `--log-format`        | Log format: 'logfmt', 'json', or 'text'       | `logfmt`                      |
-| `--internal-metrics`  | Enable internal metrics                       | `false`                       |
-| `--address`, `-a`     | Address to listen on                          | `0.0.0.0`                     |
-| `--port`, `-p`        | Port to listen on                             | `9100`                        |
-| `--docker-host`, `-d` | Host to connect to                            | `unix:///var/run/docker.sock` |
+| Option                 | Description                                            | Default                       |
+|------------------------|--------------------------------------------------------|-------------------------------|
+| `--verbose`, `-v`      | Enable verbose mode (debug logs)                       | `false`                       |
+| `--quiet`, `-q`        | Enable quiet mode (disable info logs)                  | `false`                       |
+| `--log-format`         | Log format: 'logfmt' or 'json'                         | `logfmt`                      |
+| `--internal-metrics`   | Enable internal go metrics                             | `false`                       |
+| `--size-cache-seconds` | Seconds to wait before refreshing container size cache | `5 * 60`                      |
+| `--address`, `-a`      | Address to listen on                                   | `0.0.0.0`                     |
+| `--port`, `-p`         | Port to listen on                                      | `9100`                        |
+| `--docker-host`, `-d`  | Host to connect to                                     | `unix:///var/run/docker.sock` |
 
 ### Logging
 
@@ -82,19 +87,30 @@ The exporter uses structured logging with support for multiple output formats:
 Logs include contextual information such as container IDs, error details, and operation metadata. Use `--verbose` to enable debug-level logs with additional details about container operations.
 
 Example logfmt output:
+
 ```
 time=2025-12-18T17:12:19.779Z level=INFO msg="Starting Docker Prometheus exporter" version=dev uid=1001 gid=1001 docker_host=unix:///var/run/docker.sock
 ```
 
 Example JSON output:
+
 ```json
-{"time":"2025-12-18T17:12:27.549Z","level":"INFO","msg":"Starting Docker Prometheus exporter","version":"dev","uid":1001,"gid":1001,"docker_host":"unix:///var/run/docker.sock"}
+{
+  "time": "2025-12-18T17:12:27.549Z",
+  "level": "INFO",
+  "msg": "Starting Docker Prometheus exporter",
+  "version": "dev",
+  "uid": 1001,
+  "gid": 1001,
+  "docker_host": "unix:///var/run/docker.sock"
+}
 ```
 
 ### Endpoints
 
 - `/metrics` - Prometheus metrics endpoint
 - `/status` - Status endpoint
+- `/` - Homepage with live charts
 
 ## Requirements
 

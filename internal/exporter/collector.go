@@ -199,42 +199,42 @@ func (c *DockerCollector) Collect(ch chan<- prometheus.Metric) {
 		formatContainerState(ch, containerInfo)
 		formatContainerCreated(ch, containerInfo)
 		formatContainerPorts(ch, containerInfo)
-		formatContainerSizeRootFs(ch, containerInfo)
-		formatContainerSizeRw(ch, containerInfo)
 	}
-
-	//for _, container := range containerInfo {
-	//id := container.ID
-	//inspect, err := c.dockerClient.InspectContainer(ctx, id)
-	//if err != nil {
-	//	log.WarningWith("Failed to inspect container", "error", err, "container_id", id)
-	//} else {
-	//	formatContainerStarted(ch, id, inspect)
-	//	formatContainerExitCode(ch, id, inspect)
-	//	formatContainerRestartCount(ch, id, inspect)
-	//	formatContainerFinished(ch, id, inspect)
-	//}
-	//}
 
 	for _, container := range containerInfo {
 		id := container.ID
-		//stat, err := c.dockerClient.GetContainerStats(ctx, id)
+		inspect, err := c.dockerClient.InspectContainer(ctx, id)
+		if err != nil {
+			log.GetLogger().WarnContext(ctx, "Failed to inspect container", "error", err, "container_id", id)
+		} else {
+			formatContainerStarted(ch, id, inspect)
+			formatContainerExitCode(ch, id, inspect)
+			formatContainerRestartCount(ch, id, inspect)
+			formatContainerFinished(ch, id, inspect)
+			formatContainerSizeRootFs(ch, id, inspect)
+			formatContainerSizeRw(ch, id, inspect)
+		}
+	}
+
+	for _, container := range containerInfo {
+		id := container.ID
+		stat, err := c.dockerClient.GetContainerStats(ctx, id)
 		if err != nil {
 			log.GetLogger().WarnContext(ctx, "Failed to get container stats", "error", err, "container_id", id)
 		} else {
-			//formatContainerPids(ch, id, stat)
-			//formatContainerCpuUserMicroSeconds(ch, id, stat)
-			//formatContainerCpuKernelMicroSeconds(ch, id, stat)
-			//formatContainerMemLimitKiB(ch, id, stat)
-			//formatContainerMemUsageKiB(ch, id, stat)
-			//formatContainerNetSendBytes(ch, id, stat)
-			//formatContainerNetSendDropped(ch, id, stat)
-			//formatContainerNetSendErrors(ch, id, stat)
-			//formatContainerNetRecvBytes(ch, id, stat)
-			//formatContainerNetRecvDropped(ch, id, stat)
-			//formatContainerNetRecvErrors(ch, id, stat)
-			//formatBlockOutputBytes(ch, id, stat)
-			//formatBlockInputBytes(ch, id, stat)
+			formatContainerPids(ch, id, stat)
+			formatContainerCpuUserMicroSeconds(ch, id, stat)
+			formatContainerCpuKernelMicroSeconds(ch, id, stat)
+			formatContainerMemLimitKiB(ch, id, stat)
+			formatContainerMemUsageKiB(ch, id, stat)
+			formatContainerNetSendBytes(ch, id, stat)
+			formatContainerNetSendDropped(ch, id, stat)
+			formatContainerNetSendErrors(ch, id, stat)
+			formatContainerNetRecvBytes(ch, id, stat)
+			formatContainerNetRecvDropped(ch, id, stat)
+			formatContainerNetRecvErrors(ch, id, stat)
+			formatBlockOutputBytes(ch, id, stat)
+			formatBlockInputBytes(ch, id, stat)
 		}
 	}
 }

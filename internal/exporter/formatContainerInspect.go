@@ -40,3 +40,21 @@ func formatContainerFinished(ch chan<- prometheus.Metric, containerID string, in
 		containerID,
 	)
 }
+
+func formatContainerSizeRootFs(ch chan<- prometheus.Metric, containerID string, inspect docker.ContainerInspect) {
+	ch <- prometheus.MustNewConstMetric(
+		containerSizeRootFsDesc,
+		prometheus.GaugeValue,
+		float64(inspect.SizeRootFs),
+		containerID,
+	)
+}
+
+func formatContainerSizeRw(ch chan<- prometheus.Metric, containerID string, inspect docker.ContainerInspect) {
+	ch <- prometheus.MustNewConstMetric(
+		containerSizeRwDesc,
+		prometheus.GaugeValue,
+		float64(inspect.SizeRw),
+		containerID,
+	)
+}

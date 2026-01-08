@@ -8,12 +8,21 @@ import (
 
 	"github.com/h3rmt/docker-exporter/internal/log"
 
+	"sync"
+
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/client"
 )
 
 type Client struct {
 	client *client.Client
+
+	// size cache for expensive ContainerList(Size:true)
+	sizeMu          sync.Mutex
+	sizeCache       map[string]sizeEntry // containerID -> sizes
+	sizeLastUpdated time.Time
+	sizeRefreshing  bool
+	sizeRefreshCh   chan struct{}
 }
 
 func NewDockerClient(host string) (*Client, error) {
@@ -38,13 +47,12 @@ type ContainerInfo struct {
 	NetworkMode string
 	Created     int64
 	State       container.ContainerState
-	SizeRootFs  int64
-	SizeRw      int64
 }
 
 func (c *Client) ListAllRunningContainers(ctx context.Context) ([]ContainerInfo, error) {
 	containers, err := c.client.ContainerList(ctx, client.ContainerListOptions{
-		All: true, Size: false,
+		All:  true,
+		Size: false,
 	})
 	if err != nil {
 		return nil, err
@@ -69,8 +77,6 @@ func (c *Client) ListAllRunningContainers(ctx context.Context) ([]ContainerInfo,
 			NetworkMode: c.HostConfig.NetworkMode,
 			State:       c.State,
 			Created:     c.Created,
-			SizeRootFs:  c.SizeRootFs,
-			SizeRw:      c.SizeRw,
 		}
 		log.GetLogger().DebugContext(ctx, "Listed container", "container_id", containerInfos[i].ID, "names", containerInfos[i].Names, "state", containerInfos[i].State)
 	}
@@ -82,20 +88,39 @@ type ContainerInspect struct {
 	StartedAt    uint64
 	FinishedAt   uint64
 	RestartCount int
+	SizeRootFs   int64
+	SizeRw       int64
 }
 
 func (c *Client) InspectContainer(ctx context.Context, containerID string) (ContainerInspect, error) {
+	// Ensure we have current (or at least existing) cached size values.
+	sizes := c.getCachedValues(ctx)
+	// Apply cached sizes if available
+	se, ok := sizes[containerID]
+	var sizeRootFs int64
+	var sizeRw int64
+	if ok {
+		sizeRootFs = se.SizeRootFs
+		sizeRw = se.SizeRw
+	}
+
 	inspect, err := c.client.ContainerInspect(ctx, containerID, client.ContainerInspectOptions{
-		Size: false,
+		Size: sizeRootFs == 0,
 	})
 	if err != nil {
 		return ContainerInspect{}, err
+	}
+	if sizeRootFs == 0 {
+		sizeRootFs = *inspect.Container.SizeRootFs
+		sizeRw = *inspect.Container.SizeRw
 	}
 	cInspect := ContainerInspect{
 		ExitCode:     inspect.Container.State.ExitCode,
 		StartedAt:    parseTimeOrEmpty(inspect.Container.State.StartedAt),
 		FinishedAt:   parseTimeOrEmpty(inspect.Container.State.FinishedAt),
 		RestartCount: inspect.Container.RestartCount,
+		SizeRootFs:   sizeRootFs,
+		SizeRw:       sizeRw,
 	}
 	log.GetLogger().DebugContext(ctx, "Inspected container", "container_id", containerID, "exit_code", cInspect.ExitCode, "restart_count", cInspect.RestartCount)
 	return cInspect, nil
