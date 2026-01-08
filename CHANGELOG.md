@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.1](https://github.com/H3rmt/docker-exporter/compare/v1.1.0...v1.1.1) (2026-01-08)
+
+
+### Bug Fixes
+
+* lager timeout for bg data collection for charts ([b39f267](https://github.com/H3rmt/docker-exporter/commit/b39f267db6af1e1a4a73308d88fb33fbcfb0d174))
+* show total memory, show mounted hostname ([101172e](https://github.com/H3rmt/docker-exporter/commit/101172ede60097f28018bfc799ec32ebb372b74d))
+
 ## [1.0.2](https://github.com/H3rmt/docker-exporter/compare/v1.0.1...v1.0.2) (2025-12-10)
 
 
