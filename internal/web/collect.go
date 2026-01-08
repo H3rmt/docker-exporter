@@ -27,12 +27,12 @@ func readMemInfo() (uint64, uint64, error) {
 }
 
 // readCPUPercent computes a short-sampled CPU usage percent using /proc/stat
-func readCPUPercent() (float64, float64, float64, error) {
+func readCPUPercent(measureDuration time.Duration) (float64, float64, float64, error) {
 	user0, system0, idle0, total0, err := readProcStat()
 	if err != nil {
 		return 0, 0, 0, err
 	}
-	time.Sleep(500 * time.Millisecond)
+	time.Sleep(measureDuration)
 	user1, system1, idle1, total1, err := readProcStat()
 	if err != nil {
 		return 0, 0, 0, err

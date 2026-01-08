@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/h3rmt/docker-exporter/internal/docker"
 	"github.com/h3rmt/docker-exporter/internal/log"
@@ -32,7 +33,7 @@ type UsageResponse struct {
 func HandleAPIUsage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		usage, usageUser, usageSystem, err := readCPUPercent()
+		usage, usageUser, usageSystem, err := readCPUPercent(500 * time.Millisecond)
 		if err != nil {
 			log.GetLogger().ErrorContext(ctx, "failed to read cpu", "error", err)
 		}

@@ -20,7 +20,7 @@ type DataPoint struct {
 
 func CollectInBg() {
 	data = make([]DataPoint, DataPoints)
-	usage, usageUser, usageSystem, err := readCPUPercent()
+	usage, usageUser, usageSystem, err := readCPUPercent(1000 * time.Millisecond)
 	if err != nil {
 		log.GetLogger().Error("failed to read cpu", "error", err)
 	}
@@ -41,7 +41,7 @@ func CollectInBg() {
 	index := 0
 	for range ticker.C {
 		//log.GetLogger().Debug("collecting data")
-		usage, usageUser, usageSystem, err := readCPUPercent()
+		usage, usageUser, usageSystem, err := readCPUPercent(Delay / 2)
 		if err != nil {
 			log.GetLogger().Error("failed to read cpu", "error", err)
 		}
