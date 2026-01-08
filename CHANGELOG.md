@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.0](https://github.com/H3rmt/docker-exporter/compare/v1.0.3...v1.1.0) (2026-01-08)
+
+
+### Features
+
+* added cache for docker container size ([48d7c9b](https://github.com/H3rmt/docker-exporter/commit/48d7c9b03167b76c597b7a0d9bfd35f6228a62b7))
+* added website ([69cee5d](https://github.com/H3rmt/docker-exporter/commit/69cee5da59ae4f3445ebd6cf35aa4f15da890bfb))
+
 ## [1.0.2](https://github.com/H3rmt/docker-exporter/compare/v1.0.1...v1.0.2) (2025-12-10)
 
 
