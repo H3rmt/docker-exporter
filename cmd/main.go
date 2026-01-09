@@ -26,6 +26,7 @@ var (
 	Version = "dev"
 
 	verbose          = kingpin.Flag("verbose", "Verbose mode (enabled debug logs).").Short('v').Default("false").Bool()
+	trace            = kingpin.Flag("trace", "Very Verbose mode (enabled trace logs).").Default("false").Bool()
 	quiet            = kingpin.Flag("quiet", "Quiet mode (disables info logs).").Short('q').Default("false").Bool()
 	logFormat        = kingpin.Flag("log-format", "Log format: 'logfmt' or 'json'.").Default("logfmt").Enum("logfmt", "json")
 	internalMetrics  = kingpin.Flag("internal-metrics", "Enable internal go metrics.").Default("false").Bool()
@@ -37,7 +38,7 @@ var (
 
 func main() {
 	kingpin.Parse()
-	log.InitLogger(*logFormat, *verbose, *quiet)
+	log.InitLogger(*logFormat, *verbose, *trace, *quiet)
 	log.GetLogger().Info("Starting Docker Prometheus exporter",
 		"version", Version,
 		"uid", os.Getuid(),

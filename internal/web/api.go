@@ -34,11 +34,11 @@ type UsageResponse struct {
 func HandleAPIUsage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		usage, usageUser, usageSystem, err := readCPUPercent(500 * time.Millisecond)
+		usage, usageUser, usageSystem, err := readCPUInfo(ctx, 500*time.Millisecond)
 		if err != nil {
 			log.GetLogger().ErrorContext(ctx, "failed to read cpu", "error", err)
 		}
-		mem, err := readMemPercent()
+		mem, err := readMemPercent(ctx)
 		if err != nil {
 			log.GetLogger().ErrorContext(ctx, "failed to read mem", "error", err)
 		}

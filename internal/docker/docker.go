@@ -78,7 +78,7 @@ func (c *Client) ListAllRunningContainers(ctx context.Context) ([]ContainerInfo,
 			State:       c.State,
 			Created:     c.Created,
 		}
-		log.GetLogger().DebugContext(ctx, "Listed container", "container_id", containerInfos[i].ID, "names", containerInfos[i].Names, "state", containerInfos[i].State)
+		log.GetLogger().Log(ctx, log.LevelTrace, "Listed container", "container_id", containerInfos[i].ID, "names", containerInfos[i].Names, "state", containerInfos[i].State)
 	}
 	return containerInfos, nil
 }
@@ -122,7 +122,7 @@ func (c *Client) InspectContainer(ctx context.Context, containerID string) (Cont
 		SizeRootFs:   sizeRootFs,
 		SizeRw:       sizeRw,
 	}
-	log.GetLogger().DebugContext(ctx, "Inspected container", "container_id", containerID, "exit_code", cInspect.ExitCode, "restart_count", cInspect.RestartCount)
+	log.GetLogger().Log(ctx, log.LevelTrace, "Inspected container", "container_id", containerID, "exit_code", cInspect.ExitCode, "restart_count", cInspect.RestartCount)
 	return cInspect, nil
 }
 
@@ -240,7 +240,7 @@ func (c *Client) GetContainerStats(ctx context.Context, containerID string) (Con
 		}
 	}
 
-	log.GetLogger().DebugContext(ctx, "Retrieved container stats", "container_id", containerID, "pids", recStats.PidsStats.Current, "mem_usage_kib", (recStats.MemoryStats.Usage-recStats.MemoryStats.Stats.InactiveFile)/1024)
+	log.GetLogger().Log(ctx, log.LevelTrace, "Retrieved container stats", "container_id", containerID, "pids", recStats.PidsStats.Current, "mem_usage_kib", (recStats.MemoryStats.Usage-recStats.MemoryStats.Stats.InactiveFile)/1024)
 	stat := ContainerStats{
 		PIds:                    recStats.PidsStats.Current,
 		CPUinUserModeMicroSec:   recStats.CpuStats.CpuUsage.UsageInUsermode / 1000,
