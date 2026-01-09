@@ -2,6 +2,9 @@ package web
 
 import (
 	"context"
+	"io"
+	"net"
+	"os"
 	"time"
 
 	linuxproc "github.com/c9s/goprocinfo/linux"
@@ -21,12 +24,53 @@ func readMemPercent(ctx context.Context) (float64, error) {
 }
 
 func readMemInfo(ctx context.Context) (uint64, uint64, error) {
-	mem, err := linuxproc.ReadMemInfo("/proc/meminfo")
+	// handle special case there meminfo is exposed via a socket because /proc doesnt work with docker + lxc
+	path := "/proc/meminfo"
+	if CopyDataFromSocket(ctx, "/meminfo.sock", "/meminfo") {
+		path = "/meminfo"
+	}
+	mem, err := linuxproc.ReadMemInfo(path)
 	log.GetLogger().Log(ctx, log.LevelTrace, "readMemInfo", "mem", mem, "err", err)
 	if err != nil {
 		return 0, 0, err
 	}
 	return mem.MemTotal * 1024, mem.MemAvailable * 1024, nil
+}
+
+func CopyDataFromSocket(ctx context.Context, from string, to string) bool {
+	// check if the socket exists
+	if _, err := os.Stat(from); os.IsNotExist(err) {
+		return false
+	}
+
+	// Connect to the Unix socket
+	conn, err := net.Dial("unix", from)
+	if err != nil {
+		log.GetLogger().ErrorContext(ctx, "Failed to connect to socket", "error", err, "socket", from)
+		return false
+	}
+	defer func(conn net.Conn) {
+		err := conn.Close()
+		if err != nil {
+			log.GetLogger().ErrorContext(ctx, "Failed to close socket connection", "error", err)
+		}
+	}(conn)
+
+	// Read everything from the socket
+	data, err := io.ReadAll(conn)
+	if err != nil {
+		log.GetLogger().ErrorContext(ctx, "Failed to read data from socket", "error", err)
+		return false
+	}
+
+	// Write the data to the file using ioutil
+	err = os.WriteFile(to, data, 0644)
+	if err != nil {
+		log.GetLogger().ErrorContext(ctx, "Failed to write data to file", "error", err)
+		return false
+	}
+
+	return true
 }
 
 // readCPUInfo computes a short-sampled CPU usage percent using /proc/stat
