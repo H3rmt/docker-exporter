@@ -9,12 +9,13 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func formatContainerInfo(ch chan<- prometheus.Metric, containerInfo []docker.ContainerInfo) {
+func formatContainerInfo(ch chan<- prometheus.Metric, hostname string, containerInfo []docker.ContainerInfo) {
 	for _, c := range containerInfo {
 		ch <- prometheus.MustNewConstMetric(
 			containerInfoDesc,
 			prometheus.GaugeValue,
 			1,
+			hostname,
 			c.ID,
 			c.Names[0],
 			c.ImageID,
@@ -24,13 +25,14 @@ func formatContainerInfo(ch chan<- prometheus.Metric, containerInfo []docker.Con
 	}
 }
 
-func formatContainerNames(ch chan<- prometheus.Metric, containerInfo []docker.ContainerInfo) {
+func formatContainerNames(ch chan<- prometheus.Metric, hostname string, containerInfo []docker.ContainerInfo) {
 	for _, c := range containerInfo {
 		for _, name := range c.Names {
 			ch <- prometheus.MustNewConstMetric(
 				containerNameDesc,
 				prometheus.GaugeValue,
 				1,
+				hostname,
 				c.ID,
 				name,
 			)
@@ -38,7 +40,7 @@ func formatContainerNames(ch chan<- prometheus.Metric, containerInfo []docker.Co
 	}
 }
 
-func formatContainerState(ch chan<- prometheus.Metric, containerInfo []docker.ContainerInfo) {
+func formatContainerState(ch chan<- prometheus.Metric, hostname string, containerInfo []docker.ContainerInfo) {
 	for _, c := range containerInfo {
 		var stateVal float64
 		switch c.State {
@@ -61,29 +63,32 @@ func formatContainerState(ch chan<- prometheus.Metric, containerInfo []docker.Co
 			containerStateDesc,
 			prometheus.GaugeValue,
 			stateVal,
+			hostname,
 			c.ID,
 		)
 	}
 }
 
-func formatContainerCreated(ch chan<- prometheus.Metric, containerInfo []docker.ContainerInfo) {
+func formatContainerCreated(ch chan<- prometheus.Metric, hostname string, containerInfo []docker.ContainerInfo) {
 	for _, c := range containerInfo {
 		ch <- prometheus.MustNewConstMetric(
 			containerCreatedDesc,
 			prometheus.CounterValue,
 			float64(c.Created),
+			hostname,
 			c.ID,
 		)
 	}
 }
 
-func formatContainerPorts(ch chan<- prometheus.Metric, containerInfo []docker.ContainerInfo) {
+func formatContainerPorts(ch chan<- prometheus.Metric, hostname string, containerInfo []docker.ContainerInfo) {
 	for _, c := range containerInfo {
 		for _, port := range c.Ports {
 			ch <- prometheus.MustNewConstMetric(
 				containerPortsDesc,
 				prometheus.GaugeValue,
 				1,
+				hostname,
 				c.ID,
 				strconv.Itoa(int(port.PublicPort)),
 				strconv.Itoa(int(port.PrivatePort)),
