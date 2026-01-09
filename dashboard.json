@@ -136,9 +136,9 @@
             "uid": "${source}"
           },
           "editorMode": "code",
-          "expr": "label_replace(max by(instance) (docker_container_state), \"instance\", \"$1$2\", \"instance\", \"$ip_regex\")",
+          "expr": "max by(instance) (docker_container_state)",
           "hide": false,
-          "legendFormat": "{{name}}",
+          "legendFormat": "{{hostname}}",
           "range": true,
           "refId": "A"
         }
@@ -207,12 +207,12 @@
           },
           "disableTextWrap": false,
           "editorMode": "code",
-          "expr": "label_replace(count by(instance) (docker_container_state * on(container_id) group_left(name) docker_container_info), \"instance\", \"$1$2\", \"instance\", \"$ip_regex\")",
+          "expr": "count by(instance) (docker_container_state * on(container_id) group_left(name) docker_container_info)",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
           "instant": false,
-          "legendFormat": "{{pod_name}}",
+          "legendFormat": "{{hostname}}",
           "range": true,
           "refId": "A",
           "useBackend": false
@@ -278,9 +278,9 @@
             "uid": "${source}"
           },
           "editorMode": "code",
-          "expr": "label_replace(count by (instance) (docker_container_state == 6) or count by (instance) (docker_container_state) * 0, \"instance\", \"$1$2\", \"instance\", \"$ip_regex\")",
+          "expr": "count by (instance) (docker_container_state == 6) or count by (instance) (docker_container_state) * 0",
           "hide": false,
-          "legendFormat": "{{name}}",
+          "legendFormat": "{{hostname}}",
           "range": true,
           "refId": "A"
         }
@@ -344,9 +344,9 @@
             "uid": "${source}"
           },
           "editorMode": "code",
-          "expr": "label_replace(count by (instance) (docker_container_state == 5) or count by (instance) (docker_container_state) * 0, \"instance\", \"$1$2\", \"instance\", \"$ip_regex\")",
+          "expr": "count by (instance) (docker_container_state == 5) or count by (instance) (docker_container_state) * 0",
           "hide": false,
-          "legendFormat": "{{name}}",
+          "legendFormat": "{{hostname}}",
           "range": true,
           "refId": "A"
         }
@@ -410,9 +410,9 @@
             "uid": "${source}"
           },
           "editorMode": "code",
-          "expr": "label_replace(count by (instance) (docker_container_state == 3) or count by (instance) (docker_container_state) * 0, \"instance\", \"$1$2\", \"instance\", \"$ip_regex\")",
+          "expr": "count by (instance) (docker_container_state == 3) or count by (instance) (docker_container_state) * 0",
           "hide": false,
-          "legendFormat": "{{name}}",
+          "legendFormat": "{{hostname}}",
           "range": true,
           "refId": "A"
         }
@@ -520,9 +520,9 @@
             "uid": "${source}"
           },
           "editorMode": "code",
-          "expr": "sum by(instance) (label_replace(docker_container_info * on(container_id) group_left() rate(docker_container_cpu_user_microseconds_total[$__interval]) / $multi, \"instance\", \"$1$2\", \"instance\", \"$ip_regex\"))",
+          "expr": "sum by(hostname) (docker_container_info * on(container_id) group_left() rate(docker_container_cpu_user_microseconds_total[$__interval]) / $multi)",
           "instant": false,
-          "legendFormat": "{{instance}}",
+          "legendFormat": "{{hostname}}",
           "range": true,
           "refId": "A"
         }
@@ -621,9 +621,9 @@
             "uid": "${source}"
           },
           "editorMode": "code",
-          "expr": "sum by (instance) (label_replace(docker_container_info * on(container_id) group_left()\ndocker_container_mem_usage_kib, \"instance\", \"$1$2\", \"instance\", \"$ip_regex\"))",
+          "expr": "sum by (hostname) (docker_container_info * on(container_id) group_left()\ndocker_container_mem_usage_kib)",
           "instant": false,
-          "legendFormat": "{{instance}}",
+          "legendFormat": "{{hostname}}",
           "range": true,
           "refId": "A"
         }
@@ -1052,22 +1052,10 @@
         "type": "constant"
       },
       {
-        "current": {
-          "text": "(?:[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.([0-9]{1,3})|([a-zA-Z0-9_.-]+))(?::[0-9]+)?",
-          "value": "(?:[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.([0-9]{1,3})|([a-zA-Z0-9_.-]+))(?::[0-9]+)?"
-        },
-        "description": "Use this to extract the last part of IP or hostname",
-        "hide": 2,
-        "name": "ip_regex",
-        "query": "(?:[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.([0-9]{1,3})|([a-zA-Z0-9_.-]+))(?::[0-9]+)?",
-        "skipUrlSync": true,
-        "type": "constant"
-      },
-      {
         "allowCustomValue": false,
         "current": {
-          "text": "prometheus-dev",
-          "value": "aedfqmp15kr9cf"
+          "text": "prometheus-prod",
+          "value": "df7dhzuw3deyof"
         },
         "includeAll": false,
         "label": "Source",
@@ -1081,12 +1069,12 @@
     ]
   },
   "time": {
-    "from": "now-12h",
+    "from": "now-1h",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "",
   "title": "Docker",
   "uid": "cUITC74Vk",
-  "version": 42
+  "version": 46
 }
