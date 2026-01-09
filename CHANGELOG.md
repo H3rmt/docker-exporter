@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.4](https://github.com/H3rmt/docker-exporter/compare/v1.1.3...v1.1.4) (2026-01-09)
+
+
+### Bug Fixes
+
+* add hostname to all labels ([#42](https://github.com/H3rmt/docker-exporter/issues/42)) ([9ff5391](https://github.com/H3rmt/docker-exporter/commit/9ff53913eb67d6cd655626d1b6020f5158db9930))
+* add hostname to all labels ([#42](https://github.com/H3rmt/docker-exporter/issues/42)) ([9ff5391](https://github.com/H3rmt/docker-exporter/commit/9ff53913eb67d6cd655626d1b6020f5158db9930))
+
 ## [1.1.3](https://github.com/H3rmt/docker-exporter/compare/v1.1.2...v1.1.3) (2026-01-09)
 
 
