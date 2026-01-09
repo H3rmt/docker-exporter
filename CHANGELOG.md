@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.3](https://github.com/H3rmt/docker-exporter/compare/v1.1.2...v1.1.3) (2026-01-09)
+
+
+### Bug Fixes
+
+* special handling for meminfo in socket ([9291ed3](https://github.com/H3rmt/docker-exporter/commit/9291ed300afbae0135fc6af16e00d9f173cbbfa8))
+
 ## [1.1.2](https://github.com/H3rmt/docker-exporter/compare/v1.1.1...v1.1.2) (2026-01-09)
 
 
