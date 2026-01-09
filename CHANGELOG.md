@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.2](https://github.com/H3rmt/docker-exporter/compare/v1.1.1...v1.1.2) (2026-01-09)
+
+
+### Bug Fixes
+
+* add verbose mode ([70ed1c5](https://github.com/H3rmt/docker-exporter/commit/70ed1c59da98047aa25c41c798104cba90a59293))
+
 ## [1.1.1](https://github.com/H3rmt/docker-exporter/compare/v1.1.0...v1.1.1) (2026-01-08)
 
 
