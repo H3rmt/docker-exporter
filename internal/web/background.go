@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"time"
 
 	"github.com/h3rmt/docker-exporter/internal/log"
@@ -19,12 +20,13 @@ type DataPoint struct {
 }
 
 func CollectInBg() {
+	ctx := context.Background()
 	data = make([]DataPoint, DataPoints)
-	usage, usageUser, usageSystem, err := readCPUPercent(1000 * time.Millisecond)
+	usage, usageUser, usageSystem, err := readCPUInfo(ctx, 1000*time.Millisecond)
 	if err != nil {
 		log.GetLogger().Error("failed to read cpu", "error", err)
 	}
-	mem, err := readMemPercent()
+	mem, err := readMemPercent(ctx)
 	if err != nil {
 		log.GetLogger().Error("failed to read ram", "error", err)
 	}
@@ -41,11 +43,11 @@ func CollectInBg() {
 	index := 0
 	for range ticker.C {
 		//log.GetLogger().Debug("collecting data")
-		usage, usageUser, usageSystem, err := readCPUPercent(Delay / 2)
+		usage, usageUser, usageSystem, err := readCPUInfo(ctx, Delay/2)
 		if err != nil {
 			log.GetLogger().Error("failed to read cpu", "error", err)
 		}
-		mem, err := readMemPercent()
+		mem, err := readMemPercent(ctx)
 		if err != nil {
 			log.GetLogger().Error("failed to read ram", "error", err)
 		}

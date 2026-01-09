@@ -11,11 +11,16 @@ import (
 func HandleRoot() http.HandlerFunc {
 	tmpl := template.Must(template.New("page").Parse(pageTemplate))
 	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
 		dataPoints := GetData()
 		log.GetLogger().Debug("data points", "dataPoints", len(dataPoints))
-		_, _, totalMem, err := readMemInfo()
+		totalMem, _, err := readMemInfo(ctx)
 		if err != nil {
 			log.GetLogger().Error("failed to read mem info", "error", err)
+		}
+		_, _, _, _, cpuCount, err := readProcStat(ctx)
+		if err != nil {
+			log.GetLogger().Error("failed to read cpu", "error", err)
 		}
 
 		// Prepare initial data as JSON
@@ -26,6 +31,7 @@ func HandleRoot() http.HandlerFunc {
 			CPUDataSys  []float64
 			MemData     []float64
 			TotalMem    uint64
+			CpuCount    uint64
 		}
 
 		cd := chartData{
@@ -35,6 +41,7 @@ func HandleRoot() http.HandlerFunc {
 			CPUDataSys:  make([]float64, 0),
 			MemData:     make([]float64, 0),
 			TotalMem:    totalMem / 1024, // turn into KiB
+			CpuCount:    cpuCount,
 		}
 
 		for i := range dataPoints {
@@ -98,7 +105,7 @@ const pageTemplate = `<!doctype html>
 
   <div style="display:flex; gap: 16px; justify-content: center;">
     <div class="card-container"><div class="card">
-		<h3>CPU Utilization</h3>
+		<h3>CPU Utilization (<span id="totalCPU"></span>)</h3>
         <div class="chart-container"><canvas id="cpuChart"></canvas></div>
     </div></div>
     <div class="card-container"><div class="card">
@@ -109,7 +116,7 @@ const pageTemplate = `<!doctype html>
 
   <div class="card">
 	  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
-        <h3 style="margin:0;">Containers</h3>f
+        <h3 style="margin:0;">Containers</h3>
         <button id="updateBtn" style="background:#2563eb; color:white; border:none; padding:6px 12px; border-radius:6px; font-size:14px; cursor:pointer; font-family:inherit;">Update</button>
 	  </div>
 	  <div style="overflow-y:scroll;">
@@ -340,6 +347,7 @@ document.getElementById('updateBtn').addEventListener('click', loadContainers);
 const cards = Array.from(document.getElementsByClassName('card-container'));
 cards.map((i) => i.classList.replace("card-container", "card-container-no-flex"))
 document.getElementById('totalMem').innerText = fmtBytesKiB({{.TotalMem}});
+document.getElementById('totalCPU').innerText = "{{.CpuCount}} Cores";
 </script>
 </body>
 </html>`

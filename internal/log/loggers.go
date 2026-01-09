@@ -5,6 +5,10 @@ import (
 	"os"
 )
 
+const (
+	LevelTrace = slog.Level(-8) // More verbose than DEBUG
+)
+
 var logger *slog.Logger
 
 func init() {
@@ -16,12 +20,14 @@ func init() {
 }
 
 // InitLogger initializes the logger with the specified format and verbosity
-func InitLogger(format string, verbose bool, quiet bool) {
+func InitLogger(format string, verbose bool, trace bool, quiet bool) {
 	var handler slog.Handler
 	var level slog.Level
 
 	// Determine log level
-	if verbose {
+	if trace {
+		level = LevelTrace
+	} else if verbose {
 		level = slog.LevelDebug
 	} else if quiet {
 		level = slog.LevelWarn
@@ -33,6 +39,16 @@ func InitLogger(format string, verbose bool, quiet bool) {
 	opts := &slog.HandlerOptions{
 		Level:     level,
 		AddSource: true,
+		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+			if a.Key == slog.LevelKey {
+				level := a.Value.Any().(slog.Level)
+				switch level {
+				case LevelTrace:
+					a.Value = slog.StringValue("TRACE")
+				}
+			}
+			return a
+		},
 	}
 
 	switch format {
