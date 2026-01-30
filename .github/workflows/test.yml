@@ -1,0 +1,26 @@
+name: Test Go
+
+on:
+  push:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+      - name: Build
+        run: go build -v ./...
+      - name: Set up gotestfmt
+        run: go install github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt@latest
+      - name: Run tests
+        run: |
+          set -euo pipefail
+          go test -json -v ./... 2>&1 | tee /tmp/gotest.log | gotestfmt
+      - name: Upload test log
+        uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: test-log
+          path: /tmp/gotest.log
+          if-no-files-found: error
