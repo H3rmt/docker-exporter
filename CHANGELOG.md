@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.2.0](https://github.com/H3rmt/docker-exporter/compare/v1.1.4...v1.2.0) (2026-01-30)
+
+
+### Features
+
+* enhance web UI, update status API, and refine documentation ([cdf446c](https://github.com/H3rmt/docker-exporter/commit/cdf446cfcc56be783d3dc056c0efc88f55a481e4))
+
+
+### Bug Fixes
+
+* expose IP addr in dashboard ([630ac3f](https://github.com/H3rmt/docker-exporter/commit/630ac3ffcf2625ebfb93d2552b74e0df1e537e17))
+* remove custom meminfo handling ([630ac3f](https://github.com/H3rmt/docker-exporter/commit/630ac3ffcf2625ebfb93d2552b74e0df1e537e17))
+* switch to cobra ([75fa2c6](https://github.com/H3rmt/docker-exporter/commit/75fa2c639df4a1cd11b591a4ebc9de639ea851a5))
+
 ## [1.1.4](https://github.com/H3rmt/docker-exporter/compare/v1.1.3...v1.1.4) (2026-01-09)
 
 
