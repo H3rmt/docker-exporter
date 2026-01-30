@@ -67,16 +67,16 @@ This can be customized with the --size-cache-seconds flag.
 
 ### Command-line options
 
-| Option                 | Description                                            | Default                       |
-|------------------------|--------------------------------------------------------|-------------------------------|
-| `--verbose`, `-v`      | Enable verbose mode (debug logs)                       | `false`                       |
-| `--quiet`, `-q`        | Enable quiet mode (disable info logs)                  | `false`                       |
-| `--log-format`         | Log format: 'logfmt' or 'json'                         | `logfmt`                      |
-| `--internal-metrics`   | Enable internal go metrics                             | `false`                       |
-| `--size-cache-seconds` | Seconds to wait before refreshing container size cache | `5 * 60`                      |
-| `--address`, `-a`      | Address to listen on                                   | `0.0.0.0`                     |
-| `--port`, `-p`         | Port to listen on                                      | `9100`                        |
-| `--docker-host`, `-d`  | Host to connect to                                     | `unix:///var/run/docker.sock` |
+| Option                  | Description                                             | Default                       |
+|-------------------------|---------------------------------------------------------|-------------------------------|
+| `--verbose`, `-v`       | Enable verbose mode (debug logs)                        | `false`                       |
+| `--quiet`, `-q`         | Enable quiet mode (disable info logs)                   | `false`                       |
+| `--log-format`          | Log format: 'logfmt' or 'json'                          | `logfmt`                      |
+| `--internal-metrics`    | Enable internal go metrics                              | `false`                       |
+| `--size-cache-duration` | Duration to wait before refreshing container size cache | `300s`                        |
+| `--address`, `-a`       | Address to listen on                                    | `0.0.0.0`                     |
+| `--port`, `-p`          | Port to listen on                                       | `9100`                        |
+| `--docker-host`, `-d`   | Host to connect to                                      | `unix:///var/run/docker.sock` |
 
 ### Logging
 

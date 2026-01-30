@@ -10,7 +10,7 @@ import (
 
 var sizeRefreshInterval = 5 * time.Minute
 
-func SetSizeCacheSeconds(interval time.Duration) {
+func SetSizeCacheDuration(interval time.Duration) {
 	sizeRefreshInterval = interval
 	log.GetLogger().Debug("Size cache refresh interval set", "interval", interval)
 }

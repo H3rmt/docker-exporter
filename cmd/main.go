@@ -9,8 +9,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/spf13/cobra"
 
 	"github.com/h3rmt/docker-exporter/internal/docker"
 	"github.com/h3rmt/docker-exporter/internal/exporter"
@@ -22,42 +22,78 @@ import (
 )
 
 var (
+	verbose           bool
+	trace             bool
+	quiet             bool
+	internalMetrics   bool
+	logFormat         string
+	sizeCacheDuration time.Duration
+	address           string
+	port              string
+	dockerHost        string
+)
+
+var rootCmd = &cobra.Command{
+	Use:   "",
+	Short: "Docker Prometheus exporter",
+	Args:  cobra.NoArgs,
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		// Enum check
+		switch logFormat {
+		case "json", "logfmt":
+		default:
+			return fmt.Errorf("invalid --log-format: %s (want json|logfmt)", logFormat)
+		}
+		return nil
+	},
+	Run: run,
+}
+
+func init() {
+	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Verbose mode (enabled debug logs).")
+	rootCmd.Flags().BoolVar(&trace, "trace", false, "Very Verbose mode (enabled trace logs).")
+	rootCmd.Flags().BoolVarP(&quiet, "quiet", "q", false, "Quiet mode (disables info logs).")
+	rootCmd.Flags().BoolVar(&internalMetrics, "internal-metrics", false, "Enable internal go metrics.")
+	rootCmd.Flags().StringVar(&logFormat, "log-format", "logfmt", "Log format: 'logfmt' or 'json'.")
+	rootCmd.Flags().DurationVar(&sizeCacheDuration, "size-cache-duration", time.Duration(300)*time.Second, "Duration to wait before refreshing container size cache.")
+	rootCmd.Flags().StringVarP(&address, "address", "a", "0.0.0.0", "Address to listen on.")
+	rootCmd.Flags().StringVarP(&port, "port", "p", "9100", "Port to listen on.")
+	rootCmd.Flags().StringVarP(&dockerHost, "docker-host", "d", "unix:///var/run/docker.sock", "Host to connect to.")
+}
+
+var (
 	// Version can be set at build time using -ldflags "-X main.Version=x.y.z"
 	Version = "dev"
-
-	verbose          = kingpin.Flag("verbose", "Verbose mode (enabled debug logs).").Short('v').Default("false").Bool()
-	trace            = kingpin.Flag("trace", "Very Verbose mode (enabled trace logs).").Default("false").Bool()
-	quiet            = kingpin.Flag("quiet", "Quiet mode (disables info logs).").Short('q').Default("false").Bool()
-	logFormat        = kingpin.Flag("log-format", "Log format: 'logfmt' or 'json'.").Default("logfmt").Enum("logfmt", "json")
-	internalMetrics  = kingpin.Flag("internal-metrics", "Enable internal go metrics.").Default("false").Bool()
-	address          = kingpin.Flag("address", "Address to listen on.").Short('a').Default("0.0.0.0").String()
-	secondsCacheSize = kingpin.Flag("size-cache-seconds", "Seconds to wait before refreshing container size cache.").Default("300").Int()
-	port             = kingpin.Flag("port", "Port to listen on.").Short('p').Default("9100").String()
-	dockerHost       = kingpin.Flag("docker-host", "Host to connect to.").Short('d').Default("unix:///var/run/docker.sock").String()
 )
 
 func main() {
-	kingpin.Parse()
-	log.InitLogger(*logFormat, *verbose, *trace, *quiet)
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+}
+
+func run(*cobra.Command, []string) {
+	log.InitLogger(logFormat, verbose, trace, quiet)
 	log.GetLogger().Info("Starting Docker Prometheus exporter",
 		"version", Version,
 		"uid", os.Getuid(),
 		"gid", os.Getgid(),
-		"docker_host", *dockerHost,
-		"log_format", *logFormat,
+		"docker_host", dockerHost,
+		"log_format", logFormat,
 	)
-	docker.SetSizeCacheSeconds(time.Duration(*secondsCacheSize) * time.Second)
+	docker.SetSizeCacheDuration(sizeCacheDuration)
 
 	// Initialize Docker client and metrics
-	dockerClient, err := docker.NewDockerClient(*dockerHost)
+	dockerClient, err := docker.NewDockerClient(dockerHost)
 	if err != nil {
-		log.GetLogger().Error("Failed to create Docker client", "error", err, "docker_host", *dockerHost)
+		log.GetLogger().Error("Failed to create Docker client", "error", err, "docker_host", dockerHost)
 		os.Exit(1)
 	}
 
 	log.GetLogger().Info("Collecting initial metrics...")
 	var reg prometheus.Gatherer
-	if *internalMetrics {
+	if internalMetrics {
 		reg = prometheus.DefaultGatherer
 		exporter.RegisterCollectorsWithRegistry(dockerClient, nil, Version)
 	} else {
@@ -81,10 +117,10 @@ func main() {
 		log.GetLogger().Debug("Metrics in background collector stopped")
 	}()
 
-	server := &http.Server{Addr: fmt.Sprintf("%s:%s", *address, *port), ErrorLog: slog.NewLogLogger(log.GetLogger().Handler(), slog.LevelWarn)}
+	server := &http.Server{Addr: fmt.Sprintf("%s:%s", address, port), ErrorLog: slog.NewLogLogger(log.GetLogger().Handler(), slog.LevelWarn)}
 	log.GetLogger().Info("HTTP server created")
 	go func() {
-		log.GetLogger().Info("Listening on metrics endpoint", "address", fmt.Sprintf("%s:%s", *address, *port))
+		log.GetLogger().Info("Listening on metrics endpoint", "address", fmt.Sprintf("%s:%s", address, port))
 		if err := server.ListenAndServe(); err != nil {
 			log.GetLogger().Error("HTTP server failed", "error", err)
 			os.Exit(1)
