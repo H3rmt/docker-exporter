@@ -2,9 +2,12 @@
 
 This project is similar to [prometheus-podman-exporter](https://github.com/containers/prometheus-podman-exporter), but
 for Docker containers instead of Podman containers.
-It exports Docker container metrics in Prometheus format and also provides a simple homepage with live charts.
+It exports Docker container metrics in Prometheus format and also provides a simple homepage with live charts
+for cpu and memory usage.
 
 Grafana dashboard is available at [dashboard.json](./dashboard.json)
+
+![dashboard_preview](.github/imgs/img.png)
 
 ## Exported Metrics
 
@@ -41,7 +44,24 @@ The exporter provides the following metrics:
 `docker_container_rootfs_size_bytes` and `docker_container_rw_size_bytes` are cached and only updated every 5 minutes.
 This can be customized with the --size-cache-seconds flag.
 
+![dashboard_preview](.github/imgs/img_1.png)
+
 ## Usage
+
+### Command-line options
+
+| Option                  | Description                                             | Default                       |
+|-------------------------|---------------------------------------------------------|-------------------------------|
+| `--verbose`, `-v`       | Enable verbose mode (debug logs)                        | `false`                       |
+| `--quiet`, `-q`         | Enable quiet mode (disable info logs)                   | `false`                       |
+| `--trace`               | Enable trace mode (very vebose logs)                    | `false`                       |
+| `--log-format`          | Log format: 'logfmt' or 'json'                          | `logfmt`                      |
+| `--homepage`            | Show homepage with charts.                              | `true`                        |
+| `--internal-metrics`    | Enable internal go metrics                              | `false`                       |
+| `--size-cache-duration` | Duration to wait before refreshing container size cache | `300s`                        |
+| `--address`, `-a`       | Address to listen on                                    | `0.0.0.0`                     |
+| `--port`, `-p`          | Port to listen on                                       | `9100`                        |
+| `--docker-host`, `-d`   | Host to connect to                                      | `unix:///var/run/docker.sock` |
 
 ### Running the exporter
 
@@ -52,31 +72,15 @@ This can be customized with the --size-cache-seconds flag.
 # Run with custom port and address
 ./docker-exporter --port 9101 --address 127.0.0.1
 
-# Enable verbose logging
-./docker-exporter --verbose
+# Enable verbose logging and disable homepage
+./docker-exporter --verbose --homepage=false
 
 # Use JSON log format
 ./docker-exporter --log-format=json
 
-# Use logfmt log format (default)
-./docker-exporter --log-format=logfmt
-
-# Enable internal metrics
-./docker-exporter --internal-metrics
+# Enable internal metrics and use docker with tcp socket
+./docker-exporter --internal-metrics --docker-host tcp://127.0.0.1:2375
 ```
-
-### Command-line options
-
-| Option                  | Description                                             | Default                       |
-|-------------------------|---------------------------------------------------------|-------------------------------|
-| `--verbose`, `-v`       | Enable verbose mode (debug logs)                        | `false`                       |
-| `--quiet`, `-q`         | Enable quiet mode (disable info logs)                   | `false`                       |
-| `--log-format`          | Log format: 'logfmt' or 'json'                          | `logfmt`                      |
-| `--internal-metrics`    | Enable internal go metrics                              | `false`                       |
-| `--size-cache-duration` | Duration to wait before refreshing container size cache | `300s`                        |
-| `--address`, `-a`       | Address to listen on                                    | `0.0.0.0`                     |
-| `--port`, `-p`          | Port to listen on                                       | `9100`                        |
-| `--docker-host`, `-d`   | Host to connect to                                      | `unix:///var/run/docker.sock` |
 
 ### Logging
 
@@ -114,10 +118,12 @@ Example JSON output:
 - `/status` - Status endpoint
 - `/` - Homepage with live charts
 
-## Requirements
-
-- Docker daemon running with access to the Docker socket (`/var/run/docker.sock`)
-- Go 1.24 or higher (for building)
+<table>
+  <tr>
+    <td><img src=".github/imgs/img_2.png" alt="dashboard_preview" /></td>
+    <td><img src=".github/imgs/img_3.png" alt="dashboard_preview" /></td>
+  </tr>
+</table>
 
 ## Building from source
 
@@ -125,24 +131,15 @@ Example JSON output:
 go build -o docker-exporter ./cmd/main.go
 ```
 
-## Develop with air
-
-```bash
-go install github.com/air-verse/air@latest
-
-air
-```
-
 ## Run with docker
 
 ```bash
 docker run -d --name docker-exporter \
-  -e IP="$(ip -o -4 addr show dev eth0 | grep -oP '(?<=inet\s)\d+(\.\d+){3}')" \
-  -e TZ="Europe/Berlin" -p 9100:9100 
-  -v /var/run/docker.sock:/var/run/docker.sock:ro \ 
-  -v /etc/hostname:/etc/hostname:ro -v /proc/stat:/proc/stat:ro -v /proc/meminfo:/proc/meminfo:ro
-  ghcr.io/h3rmt/docker-exporter:latest -p 9100 \
-  --log-format json
+  -e IP="$(ip route get 1.1.1.1 | head -1 | awk '{print $7}')" \
+  -e TZ="Europe/Berlin" -p 9100:9100 \
+  -v /var/run/docker.sock:/var/run/docker.sock:ro \
+  -v /etc/hostname:/etc/hostname:ro -v /proc/stat:/proc/stat:ro -v /proc/meminfo:/proc/meminfo:ro \
+  ghcr.io/h3rmt/docker-exporter:latest -p 9100 --log-format json
 ```
 
 ## Run with docker-compose
@@ -166,7 +163,7 @@ services:
     command: [ "--size-cache-seconds=600", "-v" ]
 ```
 
-### Running in docker in lxc, collecting data from lxc container
+### Running in docker in lxc
 
 When running in docker in lxc mem and cpu metrics are either collected from the host or from the container depending on
 the container's cgroup settings.

@@ -59,6 +59,7 @@ func HandleRoot() http.HandlerFunc {
 	}
 }
 
+// language=html
 const pageTemplate = `<!doctype html>
 <html lang="en">
 <head>
@@ -98,8 +99,15 @@ const pageTemplate = `<!doctype html>
   <div class="header">
     <h1>Docker Exporter</h1>
 	<div class="header-right">
-      <span id="host"></span>
-      <div><a href="/metrics">metrics</a><span id="version"></span></div>
+      <div>
+        <span id="host"></span>
+        <span id="ip"></span>
+      </div>
+      <div>
+        <a href="/metrics">metrics</a>
+        <a href="/status">status</a>
+        <span id="version"></span>
+      </div>
     </div>
   </div>
 
@@ -159,7 +167,8 @@ function fmtTime(ts){
 async function loadInfo(){
   try{
 	const info = await fetchJSON('/api/info');
-	document.getElementById('host').textContent = 'host: ' + info.hostname + 'ip: ' + info.host_ip;
+	document.getElementById('host').textContent = 'host: ' + info.hostname;
+	document.getElementById('ip').textContent = 'ip: ' + info.host_ip;
 	document.getElementById('version').textContent = 'version: ' + info.version;
   } catch(e){ console.error(e); }
 }

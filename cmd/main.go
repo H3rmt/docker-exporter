@@ -27,6 +27,7 @@ var (
 	quiet             bool
 	internalMetrics   bool
 	logFormat         string
+	homepage          bool
 	sizeCacheDuration time.Duration
 	address           string
 	port              string
@@ -55,6 +56,7 @@ func init() {
 	rootCmd.Flags().BoolVarP(&quiet, "quiet", "q", false, "Quiet mode (disables info logs).")
 	rootCmd.Flags().BoolVar(&internalMetrics, "internal-metrics", false, "Enable internal go metrics.")
 	rootCmd.Flags().StringVar(&logFormat, "log-format", "logfmt", "Log format: 'logfmt' or 'json'.")
+	rootCmd.Flags().BoolVar(&homepage, "homepage", true, "Show homepage with charts.")
 	rootCmd.Flags().DurationVar(&sizeCacheDuration, "size-cache-duration", time.Duration(300)*time.Second, "Duration to wait before refreshing container size cache.")
 	rootCmd.Flags().StringVarP(&address, "address", "a", "0.0.0.0", "Address to listen on.")
 	rootCmd.Flags().StringVarP(&port, "port", "p", "9100", "Port to listen on.")
@@ -105,17 +107,24 @@ func run(*cobra.Command, []string) {
 	}
 
 	http.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
-	http.Handle("/status", status.HandleStatus(dockerClient))
+	http.Handle("/status", status.HandleStatus(dockerClient, Version))
 	// Web UI and API
-	http.HandleFunc("/", web.HandleRoot())
-	http.HandleFunc("/api/info", web.HandleAPIInfo(Version))
-	http.HandleFunc("/api/usage", web.HandleAPIUsage())
-	http.Handle("/api/containers", web.HandleAPIContainers(dockerClient))
+	if homepage {
+		http.HandleFunc("/", web.HandleRoot())
+		http.HandleFunc("/api/info", web.HandleAPIInfo(Version))
+		http.HandleFunc("/api/usage", web.HandleAPIUsage())
+		http.Handle("/api/containers", web.HandleAPIContainers(dockerClient))
 
-	go func() {
-		web.CollectInBg()
-		log.GetLogger().Debug("Metrics in background collector stopped")
-	}()
+		go func() {
+			web.CollectInBg()
+			log.GetLogger().Debug("Metrics in background collector stopped")
+		}()
+	} else {
+		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusNotFound)
+			_, _ = w.Write([]byte("404 page not found (homepage disabled)\n"))
+		})
+	}
 
 	server := &http.Server{Addr: fmt.Sprintf("%s:%s", address, port), ErrorLog: slog.NewLogLogger(log.GetLogger().Handler(), slog.LevelWarn)}
 	log.GetLogger().Info("HTTP server created")
