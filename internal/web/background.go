@@ -58,6 +58,9 @@ func CollectInBg() {
 }
 
 func StopCollect() {
+	if ticker == nil {
+		return
+	}
 	ticker.Stop()
 }
 
