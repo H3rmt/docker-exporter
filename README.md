@@ -136,27 +136,37 @@ air
 ## Run with docker
 
 ```bash
-docker run -d --name docker-exporter -p 9100:9100 -v /var/run/docker.sock:/var/run/docker.sock:ro ghcr.io/h3rmt/docker-exporter:latest -p 9100
+docker run -d --name docker-exporter \
+  -e IP="$(ip -o -4 addr show dev eth0 | grep -oP '(?<=inet\s)\d+(\.\d+){3}')" \
+  -e TZ="Europe/Berlin" -p 9100:9100 
+  -v /var/run/docker.sock:/var/run/docker.sock:ro \ 
+  -v /etc/hostname:/etc/hostname:ro -v /proc/stat:/proc/stat:ro -v /proc/meminfo:/proc/meminfo:ro
+  ghcr.io/h3rmt/docker-exporter:latest -p 9100 \
+  --log-format json
 ```
 
 ## Run with docker-compose
 
 ```yaml
 services:
-  docker-exporter:
+  docker_exporter:
     image: ghcr.io/h3rmt/docker-exporter:latest
-    container_name: docker-exporter
-    restart: unless-stopped
-    ports:
-      - "9100:9100"
+    container_name: docker_exporter
+    restart: always
+    environment:
+      - TZ="Europe/Berlin"
+      - IP="10.10.10.10"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /etc/hostname:/etc/hostname:ro
       - /proc/stat:/proc/stat:ro
-      - /proc/meminfo:/proc/meminfo:ro 
+      - /proc/meminfo:/proc/meminfo:ro
+    ports:
+      - 9100:9100
+    command: [ "--size-cache-seconds=600", "-v" ]
 ```
 
-## Running in docker in lxc, collecting data from lxc container
+### Running in docker in lxc, collecting data from lxc container
 
 When running in docker in lxc mem and cpu metrics are either collected from the host or from the container depending on
 the container's cgroup settings.
@@ -164,22 +174,44 @@ To collect metrics from the lxc container running the docker container a helper 
 in the lxc.
 
 ```bash
-#!/bin/sh
-SOCK=./meminfo.sock
-# Exit if the socket already exists
-if [ -e "$SOCK" ]; then
-    echo "Socket $SOCK already exists. Exiting."
+#!/usr/bin/env bash
+FILE=./meminfo
+echo "Starting meminfo script on $FILE"
+# Check if it's a directory and remove it, or exit if it's a file
+if [[ -d $FILE ]]; then
+    echo "Directory $FILE exists. Removing."
+    rm -rf "$FILE"
+elif [[ -f $FILE ]]; then
+    echo "File $FILE already exists. Exiting."
     exit 1
 fi
 
-trap 'rm -f $SOCK' EXIT
-
-# Start the proxy
-socat UNIX-LISTEN:$SOCK,fork EXEC:"cat /proc/meminfo"
+trap 'rm -f $FILE' EXIT
+# Continuously copy /proc/meminfo to ./meminfo every 2 seconds
+while true; do
+cat /proc/meminfo > "$FILE"
+sleep 2
+done
 ```
 
 Start this script as a daemon.
 
-Add `./meminfo.sock:/meminfo.sock:ro` as a volume to the docker container.
-
-If a socket is found at /meminfo.sock the exporter will use it to read meminfo instead of /proc/meminfo.
+```yaml
+services:
+  docker_exporter:
+    image: ghcr.io/h3rmt/docker-exporter:latest
+    container_name: docker_exporter
+    restart: always
+    environment:
+      - TZ="Europe/Berlin"
+      - IP="10.10.10.10"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /etc/hostname:/etc/hostname:ro
+      - /proc/stat:/proc/stat:ro
+      # mount the meminfo file from the script as a volume
+      - ./meminfo:/proc/meminfo:ro
+    ports:
+      - 9100:9100
+    command: [ "--size-cache-seconds=600" ]
+```

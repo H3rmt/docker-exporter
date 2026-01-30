@@ -99,7 +99,7 @@ const pageTemplate = `<!doctype html>
     <h1>Docker Exporter</h1>
 	<div class="header-right">
       <span id="host"></span>
-      <span id="version"></span>
+      <div><a href="/metrics">metrics</a><span id="version"></span></div>
     </div>
   </div>
 
@@ -159,8 +159,8 @@ function fmtTime(ts){
 async function loadInfo(){
   try{
 	const info = await fetchJSON('/api/info');
-	document.getElementById('host').textContent = 'host: '+info.hostname;
-	document.getElementById('version').textContent = 'version: '+info.version;
+	document.getElementById('host').textContent = 'host: ' + info.hostname + 'ip: ' + info.host_ip;
+	document.getElementById('version').textContent = 'version: ' + info.version;
   } catch(e){ console.error(e); }
 }
 

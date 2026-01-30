@@ -14,13 +14,18 @@ import (
 type infoResponse struct {
 	Hostname string `json:"hostname"`
 	Version  string `json:"version"`
+	HostIP   string `json:"host_ip"`
 }
 
 func HandleAPIInfo(version string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		hn, _ := os.ReadFile("/etc/hostname")
 		hostname := strings.TrimSpace(string(hn))
-		writeJSON(w, infoResponse{Hostname: hostname, Version: version})
+		hostIP := os.Getenv("IP")
+		if hostIP == "" {
+			hostIP = "???"
+		}
+		writeJSON(w, infoResponse{Hostname: hostname, Version: version, HostIP: hostIP})
 	}
 }
 
