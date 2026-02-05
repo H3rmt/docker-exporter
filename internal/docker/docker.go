@@ -90,35 +90,66 @@ type ContainerInspect struct {
 	RestartCount int
 	SizeRootFs   int64
 	SizeRw       int64
+	NanoCpus     int64
 }
 
-func (c *Client) InspectContainer(ctx context.Context, containerID string) (ContainerInspect, error) {
-	// Ensure we have current (or at least existing) cached size values.
-	sizes := c.getCachedValues(ctx)
-	// Apply cached sizes if available
-	se, ok := sizes[containerID]
+type Inspect struct {
+	RestartCount int              `json:"RestartCount"`
+	State        *container.State `json:"State"`
+	SizeRw       *int64           `json:"SizeRw,omitempty"`
+	SizeRootFs   *int64           `json:"SizeRootFs,omitempty"`
+	HostConfig   struct {
+		// only this looks like the real value to be used for limiting cpu
+		NanoCPUs  int64 `json:"NanoCpus"`  // CPU quota in units of 10<sup>-9</sup> CPUs.
+		CPUShares int64 `json:"CpuShares"` // CPU shares (relative weight vs. other containers)
+
+		// Applicable to UNIX platforms
+		CPUPeriod          int64 `json:"CpuPeriod"`          // CPU CFS (Completely Fair Scheduler) period
+		CPUQuota           int64 `json:"CpuQuota"`           // CPU CFS (Completely Fair Scheduler) quota
+		CPURealtimePeriod  int64 `json:"CpuRealtimePeriod"`  // CPU real-time period
+		CPURealtimeRuntime int64 `json:"CpuRealtimeRuntime"` // CPU real-time runtime
+
+		// Applicable to Windows
+		CPUCount   int64 `json:"CpuCount"`   // CPU count
+		CPUPercent int64 `json:"CpuPercent"` // CPU percent
+	} `json:"HostConfig"`
+}
+
+func (c *Client) InspectContainer(ctx context.Context, containerID string, size bool) (ContainerInspect, error) {
 	var sizeRootFs int64
 	var sizeRw int64
-	if ok {
-		sizeRootFs = se.SizeRootFs
-		sizeRw = se.SizeRw
+	if size {
+		// Ensure we have current (or at least existing) cached size values.
+		sizes := c.getCachedValues(ctx)
+		// Apply cached sizes if available
+		se, ok := sizes[containerID]
+		if ok {
+			sizeRootFs = se.SizeRootFs
+			sizeRw = se.SizeRw
+		}
 	}
 
 	inspect, err := c.client.ContainerInspect(ctx, containerID, client.ContainerInspectOptions{
-		Size: sizeRootFs == 0,
+		Size: size && sizeRootFs == 0,
 	})
 	if err != nil {
 		return ContainerInspect{}, err
 	}
-	if sizeRootFs == 0 {
-		sizeRootFs = *inspect.Container.SizeRootFs
-		sizeRw = *inspect.Container.SizeRw
+	var ret Inspect
+	if err := json.Unmarshal(inspect.Raw, &ret); err != nil {
+		return ContainerInspect{}, err
+	}
+
+	if size && sizeRootFs == 0 {
+		sizeRootFs = *ret.SizeRootFs
+		sizeRw = *ret.SizeRw
 	}
 	cInspect := ContainerInspect{
-		ExitCode:     inspect.Container.State.ExitCode,
-		StartedAt:    parseTimeOrEmpty(inspect.Container.State.StartedAt),
-		FinishedAt:   parseTimeOrEmpty(inspect.Container.State.FinishedAt),
-		RestartCount: inspect.Container.RestartCount,
+		ExitCode:     ret.State.ExitCode,
+		StartedAt:    parseTimeOrEmpty(ret.State.StartedAt),
+		FinishedAt:   parseTimeOrEmpty(ret.State.FinishedAt),
+		RestartCount: ret.RestartCount,
+		NanoCpus:     ret.HostConfig.NanoCPUs,
 		SizeRootFs:   sizeRootFs,
 		SizeRw:       sizeRw,
 	}
@@ -138,23 +169,39 @@ func parseTimeOrEmpty(data string) uint64 {
 	return uint64(t.Unix())
 }
 
+type ContainerCpuStats struct {
+	// Raw CPU counters (ns).
+	UsageNS          uint64
+	UsageUserNS      uint64
+	UsageKernelNS    uint64
+	PreUsageNS       uint64
+	PreUsageUserNS   uint64
+	PreUsageKernelNS uint64
+	SystemUsageNS    uint64
+	PreSystemUsageNS uint64
+	OnlineCpus       uint32
+}
+
+type ContainerNetStats struct {
+	SendBytes   uint64
+	SendDropped uint64
+	SendErrors  uint64
+	RecvBytes   uint64
+	RecvDropped uint64
+	RecvErrors  uint64
+}
+
 type ContainerStats struct {
-	PIds                    uint64
-	CPUinUserModeMicroSec   uint64 // microseconds  / 1000
-	CPUinKernelModeMicroSec uint64 // microseconds  / 1000
+	PIds uint64
 
-	MemoryUsageKiB uint64 // / 1024 for KiB
-	MemoryLimitKiB uint64 // / 1024 for KiB
+	Cpu ContainerCpuStats
+	Net ContainerNetStats
 
-	BlockOutputBytes uint64
+	MemoryUsageKiB uint64
+	MemoryLimitKiB uint64
+
 	BlockInputBytes  uint64
-
-	NetSendBytes   uint64
-	NetSendErrors  uint64
-	NetSendDropped uint64
-	NetRecvBytes   uint64
-	NetRecvErrors  uint64
-	NetRecvDropped uint64
+	BlockOutputBytes uint64
 }
 
 type recStats struct {
@@ -162,11 +209,23 @@ type recStats struct {
 		Current uint64 `json:"current"`
 	} `json:"pids_stats"`
 	CpuStats struct {
-		CpuUsage struct {
+		SystemCpuUsage uint64 `json:"system_cpu_usage"`
+		OnlineCpus     uint32 `json:"online_cpus"`
+		CpuUsage       struct {
 			UsageInKernelmode uint64 `json:"usage_in_kernelmode"`
 			UsageInUsermode   uint64 `json:"usage_in_usermode"`
+			TotalUsage        uint64 `json:"total_usage"`
 		} `json:"cpu_usage"`
 	} `json:"cpu_stats"`
+	PreCpuStats struct {
+		SystemCpuUsage uint64 `json:"system_cpu_usage"`
+		OnlineCpus     uint32 `json:"online_cpus"`
+		CpuUsage       struct {
+			UsageInKernelmode uint64 `json:"usage_in_kernelmode"`
+			UsageInUsermode   uint64 `json:"usage_in_usermode"`
+			TotalUsage        uint64 `json:"total_usage"`
+		} `json:"cpu_usage"`
+	} `json:"precpu_stats"`
 	BlkioStats struct {
 		IoServiceBytesRecursive []struct {
 			Major int    `json:"major"`
@@ -179,7 +238,6 @@ type recStats struct {
 		Usage uint64 `json:"usage"`
 		Limit uint64 `json:"limit"`
 		Stats struct {
-			//ActiveFile   uint64 `json:"active_file"`
 			InactiveFile uint64 `json:"inactive_file"`
 		} `json:"stats"`
 	} `json:"memory_stats"`
@@ -196,7 +254,7 @@ type recStats struct {
 func (c *Client) GetContainerStats(ctx context.Context, containerID string) (ContainerStats, error) {
 	stats, err := c.client.ContainerStats(ctx, containerID, client.ContainerStatsOptions{
 		Stream:                false,
-		IncludePreviousSample: false,
+		IncludePreviousSample: true,
 	})
 	if err != nil {
 		return ContainerStats{}, err
@@ -208,19 +266,30 @@ func (c *Client) GetContainerStats(ctx context.Context, containerID string) (Con
 		}
 	}(stats.Body)
 
-	var recStats recStats
-	err = json.NewDecoder(stats.Body).Decode(&recStats)
-	if err != nil {
+	var rec recStats
+	if err := json.NewDecoder(stats.Body).Decode(&rec); err != nil {
 		return ContainerStats{}, err
 	}
+	cpu := ContainerCpuStats{
+		UsageNS:          rec.CpuStats.CpuUsage.TotalUsage,
+		UsageUserNS:      rec.CpuStats.CpuUsage.UsageInUsermode,
+		UsageKernelNS:    rec.CpuStats.CpuUsage.UsageInKernelmode,
+		PreUsageNS:       rec.PreCpuStats.CpuUsage.TotalUsage,
+		PreUsageUserNS:   rec.PreCpuStats.CpuUsage.UsageInUsermode,
+		PreUsageKernelNS: rec.PreCpuStats.CpuUsage.UsageInKernelmode,
+		SystemUsageNS:    rec.CpuStats.SystemCpuUsage,
+		PreSystemUsageNS: rec.PreCpuStats.SystemCpuUsage,
+		OnlineCpus:       rec.CpuStats.OnlineCpus,
+	}
 
+	// Network totals
 	var netSendBytes uint64
 	var netSendErrors uint64
 	var netSendDropped uint64
 	var netRecBytes uint64
 	var netRecErrors uint64
 	var netRecDropped uint64
-	for _, net := range recStats.Networks {
+	for _, net := range rec.Networks {
 		netSendBytes += net.TxBytes
 		netSendErrors += net.TxErrors
 		netSendDropped += net.TxDropped
@@ -228,34 +297,46 @@ func (c *Client) GetContainerStats(ctx context.Context, containerID string) (Con
 		netRecErrors += net.RxErrors
 		netRecDropped += net.RxDropped
 	}
+	net := ContainerNetStats{
+		SendBytes:   netSendBytes,
+		SendDropped: netSendDropped,
+		SendErrors:  netSendErrors,
+		RecvBytes:   netRecBytes,
+		RecvDropped: netRecDropped,
+		RecvErrors:  netRecErrors,
+	}
+
+	// Block IO totals
 	var blockInputBytes uint64
 	var blockOutputBytes uint64
-	for _, ioB := range recStats.BlkioStats.IoServiceBytesRecursive {
-		if ioB.Op == "read" {
+	for _, ioB := range rec.BlkioStats.IoServiceBytesRecursive {
+		switch ioB.Op {
+		case "read":
 			blockInputBytes += uint64(ioB.Value)
-		} else if ioB.Op == "write" {
+		case "write":
 			blockOutputBytes += uint64(ioB.Value)
-		} else {
-			log.GetLogger().WarnContext(ctx, "Unknown blkio operation", "operation", ioB.Op, "container_id", containerID)
+		default:
+			log.GetLogger().WarnContext(
+				ctx,
+				"Unknown blkio operation",
+				"operation",
+				ioB.Op,
+				"container_id",
+				containerID,
+			)
 		}
 	}
 
-	log.GetLogger().Log(ctx, log.LevelTrace, "Retrieved container stats", "container_id", containerID, "pids", recStats.PidsStats.Current, "mem_usage_kib", (recStats.MemoryStats.Usage-recStats.MemoryStats.Stats.InactiveFile)/1024)
 	stat := ContainerStats{
-		PIds:                    recStats.PidsStats.Current,
-		CPUinUserModeMicroSec:   recStats.CpuStats.CpuUsage.UsageInUsermode / 1000,
-		CPUinKernelModeMicroSec: recStats.CpuStats.CpuUsage.UsageInKernelmode / 1000,
-		MemoryUsageKiB:          (recStats.MemoryStats.Usage - recStats.MemoryStats.Stats.InactiveFile) / 1024,
-		MemoryLimitKiB:          recStats.MemoryStats.Limit / 1024,
-		NetSendBytes:            netSendBytes,
-		NetSendDropped:          netSendDropped,
-		NetSendErrors:           netSendErrors,
-		NetRecvBytes:            netRecBytes,
-		NetRecvDropped:          netRecDropped,
-		NetRecvErrors:           netRecErrors,
-		BlockInputBytes:         blockInputBytes,
-		BlockOutputBytes:        blockOutputBytes,
+		PIds:             rec.PidsStats.Current,
+		Cpu:              cpu,
+		MemoryUsageKiB:   (rec.MemoryStats.Usage - rec.MemoryStats.Stats.InactiveFile) / 1024,
+		MemoryLimitKiB:   rec.MemoryStats.Limit / 1024,
+		Net:              net,
+		BlockInputBytes:  blockInputBytes,
+		BlockOutputBytes: blockOutputBytes,
 	}
+
 	return stat, nil
 }
 

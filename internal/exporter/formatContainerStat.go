@@ -17,9 +17,9 @@ func formatContainerPids(ch chan<- prometheus.Metric, hostname string, container
 
 func formatContainerCpuUserMicroSeconds(ch chan<- prometheus.Metric, hostname string, containerID string, stat docker.ContainerStats) {
 	ch <- prometheus.MustNewConstMetric(
-		containerCpuUserMicroSecondsDesc,
+		containerCpuUserNSDesc,
 		prometheus.CounterValue,
-		float64(stat.CPUinUserModeMicroSec),
+		float64(stat.Cpu.UsageUserNS),
 		hostname,
 		containerID,
 	)
@@ -27,9 +27,19 @@ func formatContainerCpuUserMicroSeconds(ch chan<- prometheus.Metric, hostname st
 
 func formatContainerCpuKernelMicroSeconds(ch chan<- prometheus.Metric, hostname string, containerID string, stat docker.ContainerStats) {
 	ch <- prometheus.MustNewConstMetric(
-		containerCpuKernelMicroSecondsDesc,
+		containerCpuKernelNSDesc,
 		prometheus.CounterValue,
-		float64(stat.CPUinKernelModeMicroSec),
+		float64(stat.Cpu.UsageKernelNS),
+		hostname,
+		containerID,
+	)
+}
+
+func formatContainerCpuMicroSeconds(ch chan<- prometheus.Metric, hostname string, containerID string, stat docker.ContainerStats) {
+	ch <- prometheus.MustNewConstMetric(
+		containerCpuNSDesc,
+		prometheus.CounterValue,
+		float64(stat.Cpu.UsageNS),
 		hostname,
 		containerID,
 	)
@@ -59,7 +69,7 @@ func formatContainerNetSendBytes(ch chan<- prometheus.Metric, hostname string, c
 	ch <- prometheus.MustNewConstMetric(
 		containerNetSendBytesDesc,
 		prometheus.CounterValue,
-		float64(stat.NetSendBytes),
+		float64(stat.Net.SendBytes),
 		hostname,
 		containerID,
 	)
@@ -69,7 +79,7 @@ func formatContainerNetSendDropped(ch chan<- prometheus.Metric, hostname string,
 	ch <- prometheus.MustNewConstMetric(
 		containerNetSendDroppedDesc,
 		prometheus.CounterValue,
-		float64(stat.NetSendDropped),
+		float64(stat.Net.SendDropped),
 		hostname,
 		containerID,
 	)
@@ -79,7 +89,7 @@ func formatContainerNetSendErrors(ch chan<- prometheus.Metric, hostname string, 
 	ch <- prometheus.MustNewConstMetric(
 		containerNetSendErrorsDesc,
 		prometheus.CounterValue,
-		float64(stat.NetSendErrors),
+		float64(stat.Net.SendErrors),
 		hostname,
 		containerID,
 	)
@@ -89,7 +99,7 @@ func formatContainerNetRecvBytes(ch chan<- prometheus.Metric, hostname string, c
 	ch <- prometheus.MustNewConstMetric(
 		containerNetRecvBytesDesc,
 		prometheus.CounterValue,
-		float64(stat.NetRecvBytes),
+		float64(stat.Net.RecvBytes),
 		hostname,
 		containerID,
 	)
@@ -99,7 +109,7 @@ func formatContainerNetRecvDropped(ch chan<- prometheus.Metric, hostname string,
 	ch <- prometheus.MustNewConstMetric(
 		containerNetRecvDroppedDesc,
 		prometheus.CounterValue,
-		float64(stat.NetRecvDropped),
+		float64(stat.Net.RecvDropped),
 		hostname,
 		containerID,
 	)
@@ -109,7 +119,7 @@ func formatContainerNetRecvErrors(ch chan<- prometheus.Metric, hostname string, 
 	ch <- prometheus.MustNewConstMetric(
 		containerNetRecvErrorsDesc,
 		prometheus.CounterValue,
-		float64(stat.NetRecvErrors),
+		float64(stat.Net.RecvErrors),
 		hostname,
 		containerID,
 	)

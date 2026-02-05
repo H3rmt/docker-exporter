@@ -96,15 +96,21 @@ var (
 		[]string{"hostname", "container_id"},
 		nil,
 	)
-	containerCpuUserMicroSecondsDesc = prometheus.NewDesc(
-		"docker_container_cpu_user_microseconds_total",
-		"Time (in microseconds) spent by tasks in user mode",
+	containerCpuUserNSDesc = prometheus.NewDesc(
+		"docker_container_cpu_user_nanoseconds_total",
+		"Time (in nanoseconds) spent by tasks in user mode",
 		[]string{"hostname", "container_id"},
 		nil,
 	)
-	containerCpuKernelMicroSecondsDesc = prometheus.NewDesc(
-		"docker_container_cpu_kernel_microseconds_total",
-		"Time (in microseconds) spent by tasks in kernel mode",
+	containerCpuKernelNSDesc = prometheus.NewDesc(
+		"docker_container_cpu_kernel_nanoseconds_total",
+		"Time (in nanoseconds) spent by tasks in kernel mode",
+		[]string{"hostname", "container_id"},
+		nil,
+	)
+	containerCpuNSDesc = prometheus.NewDesc(
+		"docker_container_cpu_nanoseconds_total",
+		"Time (in nanoseconds) spent by tasks",
 		[]string{"hostname", "container_id"},
 		nil,
 	)
@@ -207,7 +213,7 @@ func (c *DockerCollector) Collect(ch chan<- prometheus.Metric) {
 
 	for _, container := range containerInfo {
 		id := container.ID
-		inspect, err := c.dockerClient.InspectContainer(ctx, id)
+		inspect, err := c.dockerClient.InspectContainer(ctx, id, true)
 		if err != nil {
 			log.GetLogger().WarnContext(ctx, "Failed to inspect container", "error", err, "container_id", id)
 		} else {
@@ -227,6 +233,7 @@ func (c *DockerCollector) Collect(ch chan<- prometheus.Metric) {
 			log.GetLogger().WarnContext(ctx, "Failed to get container stats", "error", err, "container_id", id)
 		} else {
 			formatContainerPids(ch, hostname, id, stat)
+			formatContainerCpuMicroSeconds(ch, hostname, id, stat)
 			formatContainerCpuUserMicroSeconds(ch, hostname, id, stat)
 			formatContainerCpuKernelMicroSeconds(ch, hostname, id, stat)
 			formatContainerMemLimitKiB(ch, hostname, id, stat)

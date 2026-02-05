@@ -124,15 +124,17 @@ const pageTemplate = `<!doctype html>
 
   <div class="card">
 	  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
-        <h3 style="margin:0;">Containers</h3>
+        <h3 style="margin:0;">Containers<span id="container_count"></span></h3>
+		<div style="display:flex; gap:4px;" id="container_loading_div"></div>
         <button id="updateBtn" style="background:#2563eb; color:white; border:none; padding:6px 12px; border-radius:6px; font-size:14px; cursor:pointer; font-family:inherit;">Update</button>
 	  </div>
-	  <div style="overflow-y:scroll;">
+	  <div style="overflow-y:scroll;flex:1;">
 	  <table>
 	    <thead>
 		  <tr>
   	        <th>Name</th>
     	    <th>ID</th>
+    	    <th>CPU</th>
     		<th>Created</th>
   		    <th>Mem Usage</th>
   		    <th>Status</th>
@@ -303,10 +305,25 @@ async function tick() {
 async function loadContainers() {
   try{
 	const tbody = document.getElementById('containers');
-	tbody.innerHTML = '';
-    /** @type { { exited: boolean, names: string[], id: string, created: number, mem_usage_kib: number, state: string, exit_code: number, restart_count: number }[] } */
+	const loading = document.getElementById('container_loading_div');
+	loading.innerHTML = '<svg width="20" height="20" viewBox="0 0 50 50" style="vertical-align:middle;margin-right:8px;" xmlns="http://www.w3.org/2000/svg">' +
+	  '<circle cx="25" cy="25" r="20" fill="none" stroke="#2563eb" stroke-width="4" stroke-linecap="round" stroke-dasharray="31.4 31.4" transform="rotate(-90 25 25)">' +
+	  '<animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="1s" repeatCount="indefinite"/>' +
+	  '</circle></svg>' +
+	  '<span style="vertical-align:middle;">Loading containers...</span>';
+    /** @type { { 
+    *   exited: boolean, names: string[], 
+    *   id: string, created: number, mem_usage_kib: number, 
+    *   mem_limit_kib: number, state: string, 
+    *   exit_code: number, restart_count: number,
+    *   cpu_usage: number, max_cpus: number, 
+    *   max_limited_cpus: number, cpu_limited_usage: number
+    * }[] } */
 	let list = await fetchJSON('/api/containers');
-		list.sort((a,b) => (a.exited ? a.exit_code : -1) - (b.exited ? b.exit_code : -1));
+	list.sort((a,b) => (a.exited ? a.exit_code : -1) - (b.exited ? b.exit_code : -1));
+    loading.innerHTML = "";
+    tbody.innerHTML = "";
+	document.getElementById('container_count').innerText = " (" + list.length + ")";
 	for(const c of list){
 	  const tr = document.createElement('tr');
 	  const stateClass = c.exited ? 'exited' : 'running';
@@ -324,6 +341,21 @@ async function loadContainers() {
 	  tdId.appendChild(code);
 	  tr.appendChild(tdId);
 	  
+	  // CPU column
+	  const tdCpu = document.createElement('td');
+      if (c.max_cpus) {
+          let max_cpus = c.max_cpus
+          let usage = c.cpu_usage
+          if (c.max_limited_cpus) {
+              max_cpus = c.max_limited_cpus
+              usage = c.cpu_limited_usage
+          }
+          tdCpu.innerText = (c.cpu_usage * c.max_cpus) + '% / ' + (max_cpus * 100) + '%' + '  (' + usage + '%)';
+      } else {
+          tdCpu.innerText = '-';
+      }
+	  tr.appendChild(tdCpu);
+	  
 	  // Created column
 	  const tdCreated = document.createElement('td');
 	  tdCreated.innerText = fmtTime(c.created);
@@ -331,7 +363,12 @@ async function loadContainers() {
 	  
 	  // Memory usage column
 	  const tdMem = document.createElement('td');
-	  tdMem.innerText = c.mem_usage_kib ? fmtBytesKiB(c.mem_usage_kib) : '-';
+      if (c.mem_usage_kib && c.mem_limit_kib) {
+		const memPercent = ((c.mem_usage_kib / c.mem_limit_kib) * 100).toFixed(1) + '%';
+		tdMem.innerText = fmtBytesKiB(c.mem_usage_kib) + ' / ' + fmtBytesKiB(c.mem_limit_kib) + ' (' + memPercent + ')';
+	  } else {
+        tdMem.innerText = ' - ';
+	  }
 	  tr.appendChild(tdMem);
 	  
 	  // Status column
@@ -351,6 +388,7 @@ loadInfo();
 tick();
 loadContainers();
 setInterval(tick, 2000);
+setInterval(loadContainers, 20000);
 document.getElementById('updateBtn').addEventListener('click', loadContainers);
 // remove flex: 1 css attribute from cards
 const cards = Array.from(document.getElementsByClassName('card-container'));
