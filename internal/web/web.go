@@ -92,21 +92,23 @@ const pageTemplate = `<!doctype html>
 	.status { padding:2px 6px; border-radius: 10px; font-size: 12px; }
 	.running { background:light-dark(#e6ffed, #1a3d1a); color:light-dark(#036400, #4ade80); }
 	.exited { background:light-dark(#ffeaea, #3d1a1a); color:light-dark(#8a0000, #f87171); }
+
+	.underline { text-decoration: dashed underline; }
   </style>
  </head>
 <body>
 <main>
   <div class="header">
-    <h1>Docker Exporter</h1>
+	<h1 id="host"></h1>
+	<h2 id="ip"></h2>
 	<div class="header-right">
       <div>
-        <span id="host"></span>
-        <span id="ip"></span>
+        <a href="https://github.com/h3rmt/docker-exporter" target="_blank" id="link">Docker Exporter</a>
+        <span id="version"></span>
       </div>
       <div>
         <a href="/metrics">metrics</a>
         <a href="/status">status</a>
-        <span id="version"></span>
       </div>
     </div>
   </div>
@@ -124,15 +126,17 @@ const pageTemplate = `<!doctype html>
 
   <div class="card">
 	  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
-        <h3 style="margin:0;">Containers</h3>
+        <h3 style="margin:0;">Containers<span id="container_count"></span></h3>
+		<div style="display:flex; gap:4px;" id="container_loading_div"></div>
         <button id="updateBtn" style="background:#2563eb; color:white; border:none; padding:6px 12px; border-radius:6px; font-size:14px; cursor:pointer; font-family:inherit;">Update</button>
 	  </div>
-	  <div style="overflow-y:scroll;">
+	  <div style="overflow-y:scroll;flex:1;">
 	  <table>
 	    <thead>
 		  <tr>
   	        <th>Name</th>
     	    <th>ID</th>
+    	    <th>CPU</th>
     		<th>Created</th>
   		    <th>Mem Usage</th>
   		    <th>Status</th>
@@ -166,10 +170,12 @@ function fmtTime(ts){
 
 async function loadInfo(){
   try{
+    /** @type { {hostname: string, host_ip?: string, version: string} } */
 	const info = await fetchJSON('/api/info');
-	document.getElementById('host').textContent = 'host: ' + info.hostname;
-	document.getElementById('ip').textContent = 'ip: ' + info.host_ip;
-	document.getElementById('version').textContent = 'version: ' + info.version;
+	document.getElementById('host').textContent = info.hostname;
+	document.getElementById('ip').textContent = info.host_ip;
+	document.getElementById('version').textContent = '(' + info.version + ')';
+	document.getElementById('link').href = 'https://github.com/h3rmt/docker-exporter/tree/' + info.version;
   } catch(e){ console.error(e); }
 }
 
@@ -303,10 +309,32 @@ async function tick() {
 async function loadContainers() {
   try{
 	const tbody = document.getElementById('containers');
-	tbody.innerHTML = '';
-    /** @type { { exited: boolean, names: string[], id: string, created: number, mem_usage_kib: number, state: string, exit_code: number, restart_count: number }[] } */
+	const loading = document.getElementById('container_loading_div');
+	loading.innerHTML = '<svg width="20" height="20" viewBox="0 0 50 50" style="vertical-align:middle;margin-right:8px;" xmlns="http://www.w3.org/2000/svg">' +
+	  '<circle cx="25" cy="25" r="20" fill="none" stroke="#2563eb" stroke-width="4" stroke-linecap="round" stroke-dasharray="31.4 31.4" transform="rotate(-90 25 25)">' +
+	  '<animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="1s" repeatCount="indefinite"/>' +
+	  '</circle></svg>' +
+	  '<span style="vertical-align:middle;">Loading containers...</span>';
+    /** @type { { 
+    *   exited: boolean, names: string[], 
+    *   id: string, created: number, mem_usage_kib: number, 
+    *   mem_limit_kib: number, state: string, 
+    *   exit_code: number, restart_count: number,
+    *   cpu_usage: number, max_cpus: number, 
+    *   max_limited_cpus: number, cpu_limited_usage: number
+    * }[] } */
 	let list = await fetchJSON('/api/containers');
-		list.sort((a,b) => (a.exited ? a.exit_code : -1) - (b.exited ? b.exit_code : -1));
+	list.sort((a,b) => {
+		const exitA = a.exited ? a.exit_code : -1;
+		const exitB = b.exited ? b.exit_code : -1;
+		if (exitA !== exitB) {
+			return exitA - exitB;
+		}
+		return a.created - b.created;
+	});
+    loading.innerHTML = "";
+    tbody.innerHTML = "";
+	document.getElementById('container_count').innerText = " (" + list.length + ")";
 	for(const c of list){
 	  const tr = document.createElement('tr');
 	  const stateClass = c.exited ? 'exited' : 'running';
@@ -320,18 +348,56 @@ async function loadContainers() {
 	  const tdId = document.createElement('td');
 	  const code = document.createElement('code');
 	  code.title = c.id + '\n';
+      code.classList.add('underline');
 	  code.innerText = c.id.substring(0,12);
 	  tdId.appendChild(code);
 	  tr.appendChild(tdId);
 	  
+	  // CPU column
+	  const tdCpu = document.createElement('td');
+      if (c.max_cpus) {
+      	  tdCpu.classList.add('underline');
+          tdCpu.innerText = (c.cpu_usage * c.max_cpus) + '% / ' + (c.max_limited_cpus * 100) + '%' + '  (' + c.cpu_limited_usage + '%)';
+          tdCpu.title = (c.cpu_usage * c.max_cpus)+ '% / ' + (c.max_cpus * 100) + '%' + '  (' + c.cpu_usage + '%)';
+      } else {
+          tdCpu.innerText = '-';
+      }
+	  tr.appendChild(tdCpu);
+	  
 	  // Created column
 	  const tdCreated = document.createElement('td');
+      tdCreated.classList.add('underline');
+	  const now = Date.now();
+	  const createdMs = c.created * 1000;
+	  const diffMs = now - createdMs;
+	  const diffSec = Math.floor(diffMs / 1000);
+	  const diffMin = Math.floor(diffSec / 60);
+	  const diffHour = Math.floor(diffMin / 60);
+	  const diffDay = Math.floor(diffHour / 24);
+	  
+	  let durationStr = '';
+	  if (diffDay > 0) {
+		durationStr = diffDay + 'd ' + (diffHour % 24) + 'h';
+	  } else if (diffHour > 0) {
+		durationStr = diffHour + 'h ' + (diffMin % 60) + 'm';
+	  } else if (diffMin > 0) {
+		durationStr = diffMin + 'm ' + (diffSec % 60) + 's';
+	  } else {
+		durationStr = diffSec + 's';
+	  }
+	  
 	  tdCreated.innerText = fmtTime(c.created);
+	  tdCreated.title = durationStr + " Ago"
 	  tr.appendChild(tdCreated);
 	  
 	  // Memory usage column
 	  const tdMem = document.createElement('td');
-	  tdMem.innerText = c.mem_usage_kib ? fmtBytesKiB(c.mem_usage_kib) : '-';
+      if (c.mem_usage_kib && c.mem_limit_kib) {
+		const memPercent = ((c.mem_usage_kib / c.mem_limit_kib) * 100).toFixed(1) + '%';
+		tdMem.innerText = fmtBytesKiB(c.mem_usage_kib) + ' / ' + fmtBytesKiB(c.mem_limit_kib) + ' (' + memPercent + ')';
+	  } else {
+        tdMem.innerText = ' - ';
+	  }
 	  tr.appendChild(tdMem);
 	  
 	  // Status column
@@ -351,6 +417,7 @@ loadInfo();
 tick();
 loadContainers();
 setInterval(tick, 2000);
+setInterval(loadContainers, 30000);
 document.getElementById('updateBtn').addEventListener('click', loadContainers);
 // remove flex: 1 css attribute from cards
 const cards = Array.from(document.getElementsByClassName('card-container'));
