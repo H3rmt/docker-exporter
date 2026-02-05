@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.3.0](https://github.com/H3rmt/docker-exporter/compare/v1.2.0...v1.3.0) (2026-02-05)
+
+
+### Features
+
+* add CPU and memory limit statistics to homepage ([bd5eb14](https://github.com/H3rmt/docker-exporter/commit/bd5eb14cf2bb75ffa42617127d21ad4cb59b3cfd))
+* added `docker_container_cpu_percent` and `docker_container_cpu_percent_host` ([da3540b](https://github.com/H3rmt/docker-exporter/commit/da3540bcdac3f60cc1d472910bbbc07b00ae23bf))
+* added docker_container_cpu_percent and docker_container_cpu_percent_host ([21875a6](https://github.com/H3rmt/docker-exporter/commit/21875a6a43e11d274a43ee2aac5c9d5cb13253ec))
+* optimize container data collection with parallel processing ([c93ea9f](https://github.com/H3rmt/docker-exporter/commit/c93ea9f18ad3925841a37915ccea564a7cf019b6))
+
 ## [1.2.0](https://github.com/H3rmt/docker-exporter/compare/v1.1.4...v1.2.0) (2026-01-30)
 
 
