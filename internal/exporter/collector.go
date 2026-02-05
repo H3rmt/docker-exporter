@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/h3rmt/docker-exporter/internal/docker"
 	"github.com/h3rmt/docker-exporter/internal/log"
@@ -187,6 +188,12 @@ func (c *DockerCollector) Describe(ch chan<- *prometheus.Desc) {
 	prometheus.DescribeByCollect(c, ch)
 }
 
+type containerResult struct {
+	id      string
+	inspect docker.ContainerInspect
+	stat    docker.ContainerStats
+}
+
 func (c *DockerCollector) Collect(ch chan<- prometheus.Metric) {
 	hostname := getHostname()
 	// Export version information
@@ -197,56 +204,71 @@ func (c *DockerCollector) Collect(ch chan<- prometheus.Metric) {
 		hostname,
 		c.version,
 	)
-
 	ctx := context.Background()
 
 	containerInfo, err := c.dockerClient.ListAllRunningContainers(ctx)
 	if err != nil {
 		log.GetLogger().WarnContext(ctx, "Failed to list running containers", "error", err)
-	} else {
-		formatContainerInfo(ch, hostname, containerInfo)
-		formatContainerNames(ch, hostname, containerInfo)
-		formatContainerState(ch, hostname, containerInfo)
-		formatContainerCreated(ch, hostname, containerInfo)
-		formatContainerPorts(ch, hostname, containerInfo)
+		return
 	}
 
-	for _, container := range containerInfo {
-		id := container.ID
-		inspect, err := c.dockerClient.InspectContainer(ctx, id, true)
-		if err != nil {
-			log.GetLogger().WarnContext(ctx, "Failed to inspect container", "error", err, "container_id", id)
-		} else {
-			formatContainerStarted(ch, hostname, id, inspect)
-			formatContainerExitCode(ch, hostname, id, inspect)
-			formatContainerRestartCount(ch, hostname, id, inspect)
-			formatContainerFinished(ch, hostname, id, inspect)
-			formatContainerSizeRootFs(ch, hostname, id, inspect)
-			formatContainerSizeRw(ch, hostname, id, inspect)
-		}
-	}
+	formatContainerInfo(ch, hostname, containerInfo)
+	formatContainerNames(ch, hostname, containerInfo)
+	formatContainerState(ch, hostname, containerInfo)
+	formatContainerCreated(ch, hostname, containerInfo)
+	formatContainerPorts(ch, hostname, containerInfo)
+
+	resultCh := make(chan containerResult, len(containerInfo))
+	var wg sync.WaitGroup
 
 	for _, container := range containerInfo {
-		id := container.ID
-		stat, err := c.dockerClient.GetContainerStats(ctx, id)
-		if err != nil {
-			log.GetLogger().WarnContext(ctx, "Failed to get container stats", "error", err, "container_id", id)
-		} else {
-			formatContainerPids(ch, hostname, id, stat)
-			formatContainerCpuMicroSeconds(ch, hostname, id, stat)
-			formatContainerCpuUserMicroSeconds(ch, hostname, id, stat)
-			formatContainerCpuKernelMicroSeconds(ch, hostname, id, stat)
-			formatContainerMemLimitKiB(ch, hostname, id, stat)
-			formatContainerMemUsageKiB(ch, hostname, id, stat)
-			formatContainerNetSendBytes(ch, hostname, id, stat)
-			formatContainerNetSendDropped(ch, hostname, id, stat)
-			formatContainerNetSendErrors(ch, hostname, id, stat)
-			formatContainerNetRecvBytes(ch, hostname, id, stat)
-			formatContainerNetRecvDropped(ch, hostname, id, stat)
-			formatContainerNetRecvErrors(ch, hostname, id, stat)
-			formatBlockOutputBytes(ch, hostname, id, stat)
-			formatBlockInputBytes(ch, hostname, id, stat)
-		}
+		wg.Add(1)
+		go func(container docker.ContainerInfo) {
+			defer wg.Done()
+			id := container.ID
+
+			inspect, err := c.dockerClient.InspectContainer(ctx, id, true)
+			if err != nil {
+				log.GetLogger().WarnContext(ctx, "Failed to inspect container", "error", err, "container_id", id)
+			} else {
+				stat, err := c.dockerClient.GetContainerStats(ctx, id)
+				if err != nil {
+					log.GetLogger().WarnContext(ctx, "Failed to get container stats", "error", err, "container_id", id)
+				} else {
+					result := containerResult{id: id, stat: stat, inspect: inspect}
+					resultCh <- result
+				}
+			}
+
+		}(container)
+	}
+
+	go func() {
+		wg.Wait()
+		close(resultCh)
+	}()
+
+	for result := range resultCh {
+		formatContainerStarted(ch, hostname, result.id, result.inspect)
+		formatContainerExitCode(ch, hostname, result.id, result.inspect)
+		formatContainerRestartCount(ch, hostname, result.id, result.inspect)
+		formatContainerFinished(ch, hostname, result.id, result.inspect)
+		formatContainerSizeRootFs(ch, hostname, result.id, result.inspect)
+		formatContainerSizeRw(ch, hostname, result.id, result.inspect)
+		formatContainerPids(ch, hostname, result.id, result.stat)
+		formatContainerCpuMicroSeconds(ch, hostname, result.id, result.stat)
+		formatContainerCpuUserMicroSeconds(ch, hostname, result.id, result.stat)
+		formatContainerCpuKernelMicroSeconds(ch, hostname, result.id, result.stat)
+		formatContainerMemLimitKiB(ch, hostname, result.id, result.stat)
+		formatContainerMemUsageKiB(ch, hostname, result.id, result.stat)
+		formatContainerNetSendBytes(ch, hostname, result.id, result.stat)
+		formatContainerNetSendDropped(ch, hostname, result.id, result.stat)
+		formatContainerNetSendErrors(ch, hostname, result.id, result.stat)
+		formatContainerNetRecvBytes(ch, hostname, result.id, result.stat)
+		formatContainerNetRecvDropped(ch, hostname, result.id, result.stat)
+		formatContainerNetRecvErrors(ch, hostname, result.id, result.stat)
+		formatBlockOutputBytes(ch, hostname, result.id, result.stat)
+		formatBlockInputBytes(ch, hostname, result.id, result.stat)
 	}
 }
 

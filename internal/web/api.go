@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/h3rmt/docker-exporter/internal/docker"
@@ -71,65 +72,81 @@ type containerItem struct {
 func HandleAPIContainers(cli *docker.Client) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
+		log.GetLogger().Log(ctx, log.LevelTrace, "handle api containers")
 		var items []containerItem
 		containers, err := cli.ListAllRunningContainers(ctx)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		log.GetLogger().Log(ctx, log.LevelTrace, "found containers", "containers", len(containers))
+		var wg sync.WaitGroup
+		var mu sync.Mutex
+		items = make([]containerItem, 0, len(containers))
+
 		for _, c := range containers {
-			// inspect for exit code
-			var exitCode int
-			var restartCount int
-			var nanoCpus int64
-			if insp, err := cli.InspectContainer(ctx, c.ID, false); err == nil {
-				log.GetLogger().Log(ctx, log.LevelTrace, "inspect container", "inspect", insp)
-				exitCode = insp.ExitCode
-				restartCount = insp.RestartCount
-				nanoCpus = insp.NanoCpus
-			}
+			wg.Add(1)
+			go func(c docker.ContainerInfo) {
+				defer wg.Done()
 
-			// stats might fail for exited containers; ignore errors per item
-			var memKiB uint64
-			var memLimitKiB uint64
-			var cpuPercentOfSystem uint64
-			var maxCPUs float64
-			var maxLimitedCpus float64
-			if c.State == container.StateRunning {
-				if st, err := cli.GetContainerStats(ctx, c.ID); err == nil {
-					memKiB = st.MemoryUsageKiB
-					memLimitKiB = st.MemoryLimitKiB
+				// inspect for exit code
+				var exitCode int
+				var restartCount int
+				var nanoCpus int64
+				if insp, err := cli.InspectContainer(ctx, c.ID, false); err == nil {
+					exitCode = insp.ExitCode
+					restartCount = insp.RestartCount
+					nanoCpus = insp.NanoCpus
+				}
 
-					// Compute CPU% of system (docker stats style)
-					cpuDelta := st.Cpu.UsageNS - st.Cpu.PreUsageNS
-					sysDelta := st.Cpu.SystemUsageNS - st.Cpu.PreSystemUsageNS
-					maxCPUs = float64(st.Cpu.OnlineCpus)
-					if nanoCpus > 0 {
-						maxLimitedCpus = float64(nanoCpus) / 1000000000.0
-					}
-					if sysDelta > 0 {
-						cpuPercentOfSystem = uint64(float64(cpuDelta) / float64(sysDelta) * 100.0)
+				// stats might fail for exited containers; ignore errors per item
+				var memKiB uint64
+				var memLimitKiB uint64
+				var cpuPercentOfSystem uint64
+				var maxCPUs float64
+				var maxLimitedCpus float64
+				if c.State == container.StateRunning {
+					if st, err := cli.GetContainerStats(ctx, c.ID); err == nil {
+						memKiB = st.MemoryUsageKiB
+						memLimitKiB = st.MemoryLimitKiB
+
+						// Compute CPU% of system (docker stats style)
+						cpuDelta := st.Cpu.UsageNS - st.Cpu.PreUsageNS
+						sysDelta := st.Cpu.SystemUsageNS - st.Cpu.PreSystemUsageNS
+						maxCPUs = float64(st.Cpu.OnlineCpus)
+						if nanoCpus > 0 {
+							maxLimitedCpus = float64(nanoCpus) / 1000000000.0
+						}
+						if sysDelta > 0 {
+							cpuPercentOfSystem = uint64(float64(cpuDelta) / float64(sysDelta) * 100.0)
+						}
 					}
 				}
-			}
-			stateStr := string(c.State)
-			item := containerItem{
-				ID:              c.ID,
-				Names:           c.Names,
-				Created:         c.Created,
-				State:           stateStr,
-				Exited:          strings.ToLower(stateStr) == "exited",
-				ExitCode:        exitCode,
-				RestartCount:    restartCount,
-				MemUsageKiB:     memKiB,
-				MemLimitKiB:     memLimitKiB,
-				CpuUsage:        cpuPercentOfSystem,
-				MaxCpus:         maxCPUs,
-				CpuLimitedUsage: uint64((float64(cpuPercentOfSystem) / maxLimitedCpus) * maxCPUs),
-				MaxLimitedCpus:  maxLimitedCpus,
-			}
-			items = append(items, item)
+				stateStr := string(c.State)
+				item := containerItem{
+					ID:              c.ID,
+					Names:           c.Names,
+					Created:         c.Created,
+					State:           stateStr,
+					Exited:          strings.ToLower(stateStr) == "exited",
+					ExitCode:        exitCode,
+					RestartCount:    restartCount,
+					MemUsageKiB:     memKiB,
+					MemLimitKiB:     memLimitKiB,
+					CpuUsage:        cpuPercentOfSystem,
+					MaxCpus:         maxCPUs,
+					CpuLimitedUsage: uint64((float64(cpuPercentOfSystem) / maxLimitedCpus) * maxCPUs),
+					MaxLimitedCpus:  maxLimitedCpus,
+				}
+
+				mu.Lock()
+				items = append(items, item)
+				mu.Unlock()
+			}(c)
 		}
+		log.GetLogger().Log(ctx, log.LevelTrace, "waiting for container stats", "containers", len(containers))
+		wg.Wait()
+		log.GetLogger().Log(ctx, log.LevelTrace, "done waiting for container stats")
 		writeJSON(w, items)
 	})
 }
