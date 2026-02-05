@@ -92,21 +92,23 @@ const pageTemplate = `<!doctype html>
 	.status { padding:2px 6px; border-radius: 10px; font-size: 12px; }
 	.running { background:light-dark(#e6ffed, #1a3d1a); color:light-dark(#036400, #4ade80); }
 	.exited { background:light-dark(#ffeaea, #3d1a1a); color:light-dark(#8a0000, #f87171); }
+
+	.underline { text-decoration: dashed underline; }
   </style>
  </head>
 <body>
 <main>
   <div class="header">
-    <h1>Docker Exporter</h1>
+	<h1 id="host"></h1>
+	<h2 id="ip"></h2>
 	<div class="header-right">
       <div>
-        <span id="host"></span>
-        <span id="ip"></span>
+        <a href="https://github.com/h3rmt/docker-exporter" target="_blank" id="link">Docker Exporter</a>
+        <span id="version"></span>
       </div>
       <div>
         <a href="/metrics">metrics</a>
         <a href="/status">status</a>
-        <span id="version"></span>
       </div>
     </div>
   </div>
@@ -168,10 +170,12 @@ function fmtTime(ts){
 
 async function loadInfo(){
   try{
+    /** @type { {hostname: string, host_ip?: string, version: string} } */
 	const info = await fetchJSON('/api/info');
-	document.getElementById('host').textContent = 'host: ' + info.hostname;
-	document.getElementById('ip').textContent = 'ip: ' + info.host_ip;
-	document.getElementById('version').textContent = 'version: ' + info.version;
+	document.getElementById('host').textContent = info.hostname;
+	document.getElementById('ip').textContent = info.host_ip;
+	document.getElementById('version').textContent = '(' + info.version + ')';
+	document.getElementById('link').href = 'https://github.com/h3rmt/docker-exporter/tree/' + info.version;
   } catch(e){ console.error(e); }
 }
 
@@ -320,7 +324,14 @@ async function loadContainers() {
     *   max_limited_cpus: number, cpu_limited_usage: number
     * }[] } */
 	let list = await fetchJSON('/api/containers');
-	list.sort((a,b) => (a.exited ? a.exit_code : -1) - (b.exited ? b.exit_code : -1));
+	list.sort((a,b) => {
+		const exitA = a.exited ? a.exit_code : -1;
+		const exitB = b.exited ? b.exit_code : -1;
+		if (exitA !== exitB) {
+			return exitA - exitB;
+		}
+		return a.created - b.created;
+	});
     loading.innerHTML = "";
     tbody.innerHTML = "";
 	document.getElementById('container_count').innerText = " (" + list.length + ")";
@@ -337,6 +348,7 @@ async function loadContainers() {
 	  const tdId = document.createElement('td');
 	  const code = document.createElement('code');
 	  code.title = c.id + '\n';
+      code.classList.add('underline');
 	  code.innerText = c.id.substring(0,12);
 	  tdId.appendChild(code);
 	  tr.appendChild(tdId);
@@ -344,13 +356,9 @@ async function loadContainers() {
 	  // CPU column
 	  const tdCpu = document.createElement('td');
       if (c.max_cpus) {
-          let max_cpus = c.max_cpus
-          let usage = c.cpu_usage
-          if (c.max_limited_cpus) {
-              max_cpus = c.max_limited_cpus
-              usage = c.cpu_limited_usage
-          }
-          tdCpu.innerText = (c.cpu_usage * c.max_cpus) + '% / ' + (max_cpus * 100) + '%' + '  (' + usage + '%)';
+      	  tdCpu.classList.add('underline');
+          tdCpu.innerText = (c.cpu_usage * c.max_cpus) + '% / ' + (c.max_limited_cpus * 100) + '%' + '  (' + c.cpu_limited_usage + '%)';
+          tdCpu.title = (c.cpu_usage * c.max_cpus)+ '% / ' + (c.max_cpus * 100) + '%' + '  (' + c.cpu_usage + '%)';
       } else {
           tdCpu.innerText = '-';
       }
@@ -358,7 +366,28 @@ async function loadContainers() {
 	  
 	  // Created column
 	  const tdCreated = document.createElement('td');
+      tdCreated.classList.add('underline');
+	  const now = Date.now();
+	  const createdMs = c.created * 1000;
+	  const diffMs = now - createdMs;
+	  const diffSec = Math.floor(diffMs / 1000);
+	  const diffMin = Math.floor(diffSec / 60);
+	  const diffHour = Math.floor(diffMin / 60);
+	  const diffDay = Math.floor(diffHour / 24);
+	  
+	  let durationStr = '';
+	  if (diffDay > 0) {
+		durationStr = diffDay + 'd ' + (diffHour % 24) + 'h';
+	  } else if (diffHour > 0) {
+		durationStr = diffHour + 'h ' + (diffMin % 60) + 'm';
+	  } else if (diffMin > 0) {
+		durationStr = diffMin + 'm ' + (diffSec % 60) + 's';
+	  } else {
+		durationStr = diffSec + 's';
+	  }
+	  
 	  tdCreated.innerText = fmtTime(c.created);
+	  tdCreated.title = durationStr + " Ago"
 	  tr.appendChild(tdCreated);
 	  
 	  // Memory usage column
@@ -388,7 +417,7 @@ loadInfo();
 tick();
 loadContainers();
 setInterval(tick, 2000);
-setInterval(loadContainers, 20000);
+setInterval(loadContainers, 30000);
 document.getElementById('updateBtn').addEventListener('click', loadContainers);
 // remove flex: 1 css attribute from cards
 const cards = Array.from(document.getElementsByClassName('card-container'));

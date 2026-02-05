@@ -29,6 +29,8 @@ The exporter provides the following metrics:
 | `docker_container_cpu_user_nanoseconds_total`   | Counter | Time (in nanoseoconds) spent by tasks                                                        | `hostname`, `container_id`                                                |
 | `docker_container_cpu_kernel_nanoseconds_total` | Counter | Time (in nanoseoconds) spent by tasks in user mode                                           | `hostname`, `container_id`                                                |
 | `docker_container_cpu_nanoseconds_total`        | Counter | Time (in nanoseoconds) spent by tasks in kernel mode                                         | `hostname`, `container_id`                                                |
+| `docker_container_cpu_percent`                  | Gauge   | Percentage of CPU used by the container (relative to max available CPU cores)                | `hostname`, `container_id`                                                |
+| `docker_container_cpu_percent_host`             | Gauge   | Percentage of CPU used by the container (relative to host CPU cores)                         | `hostname`, `container_id`                                                |
 | `docker_container_mem_limit_kib`                | Gauge   | Container memory limit in KiB                                                                | `hostname`, `container_id`                                                |
 | `docker_container_mem_usage_kib`                | Gauge   | Container memory usage in KiB                                                                | `hostname`, `container_id`                                                |
 | `docker_container_net_send_bytes_total`         | Counter | Total number of bytes sent                                                                   | `hostname`, `container_id`                                                |
@@ -44,6 +46,10 @@ The exporter provides the following metrics:
 
 `docker_container_rootfs_size_bytes` and `docker_container_rw_size_bytes` are cached and only updated every 5 minutes.
 This can be customized with the --size-cache-seconds flag.
+
+`docker_container_cpu_percent` should probably be prefered over `docker_container_cpu_percent_host` as it takes the
+container's cgroup settings into account. (you can use `--cpus=3` to limit the container to only three cpu cores which
+this metric will report correctly)
 
 ![dashboard_preview](.github/imgs/img_1.png)
 
@@ -64,24 +70,18 @@ This can be customized with the --size-cache-seconds flag.
 | `--port`, `-p`          | Port to listen on                                       | `9100`                        |
 | `--docker-host`, `-d`   | Host to connect to                                      | `unix:///var/run/docker.sock` |
 
-### Running the exporter
+### Endpoints
 
-```bash
-# Run with default settings
-./docker-exporter
+- `/metrics` - Prometheus metrics endpoint
+- `/status` - Status endpoint
+- `/` - Homepage with live charts
 
-# Run with custom port and address
-./docker-exporter --port 9101 --address 127.0.0.1
-
-# Enable verbose logging and disable homepage
-./docker-exporter --verbose --homepage=false
-
-# Use JSON log format
-./docker-exporter --log-format=json
-
-# Enable internal metrics and use docker with tcp socket
-./docker-exporter --internal-metrics --docker-host tcp://127.0.0.1:2375
-```
+<table>
+  <tr>
+    <td><img src=".github/imgs/img_2.png" alt="dashboard_preview" /></td>
+    <td><img src=".github/imgs/img_3.png" alt="dashboard_preview" /></td>
+  </tr>
+</table>
 
 ### Logging
 
@@ -113,18 +113,24 @@ Example JSON output:
 }
 ```
 
-### Endpoints
+### Running the exporter
 
-- `/metrics` - Prometheus metrics endpoint
-- `/status` - Status endpoint
-- `/` - Homepage with live charts
+```bash
+# Run with default settings
+./docker-exporter
 
-<table>
-  <tr>
-    <td><img src=".github/imgs/img_2.png" alt="dashboard_preview" /></td>
-    <td><img src=".github/imgs/img_3.png" alt="dashboard_preview" /></td>
-  </tr>
-</table>
+# Run with custom port and address
+./docker-exporter --port 9101 --address 127.0.0.1
+
+# Enable verbose logging and disable homepage
+./docker-exporter --verbose --homepage=false
+
+# Use JSON log format
+./docker-exporter --log-format=json
+
+# Enable internal metrics and use docker with tcp socket
+./docker-exporter --internal-metrics --docker-host tcp://127.0.0.1:2375
+```
 
 ## Building from source
 

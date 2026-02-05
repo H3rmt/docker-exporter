@@ -45,6 +45,47 @@ func formatContainerCpuMicroSeconds(ch chan<- prometheus.Metric, hostname string
 	)
 }
 
+func formatContainerCpuPercentHost(ch chan<- prometheus.Metric, hostname string, containerID string, stat docker.ContainerStats) {
+	var cpuPercentOfSystem uint64
+	cpuDelta := stat.Cpu.UsageNS - stat.Cpu.PreUsageNS
+	sysDelta := stat.Cpu.SystemUsageNS - stat.Cpu.PreSystemUsageNS
+	if sysDelta > 0 {
+		cpuPercentOfSystem = uint64(float64(cpuDelta) / float64(sysDelta) * 100.0)
+	}
+
+	ch <- prometheus.MustNewConstMetric(
+		containerCpuPercentHost,
+		prometheus.GaugeValue,
+		float64(cpuPercentOfSystem),
+		hostname,
+		containerID,
+	)
+}
+
+func formatContainerCpuPercent(ch chan<- prometheus.Metric, hostname string, containerID string, stat docker.ContainerStats, inspect docker.ContainerInspect) {
+	var cpuPercentOfSystemLimited uint64
+
+	cpuDelta := stat.Cpu.UsageNS - stat.Cpu.PreUsageNS
+	sysDelta := stat.Cpu.SystemUsageNS - stat.Cpu.PreSystemUsageNS
+	maxCPUs := float64(stat.Cpu.OnlineCpus)
+	maxLimitedCpus := maxCPUs
+	if inspect.NanoCpus > 0 {
+		maxLimitedCpus = float64(inspect.NanoCpus) / 1000000000.0
+	}
+	if sysDelta > 0 {
+		cpuPercentOfSystem := uint64(float64(cpuDelta) / float64(sysDelta) * 100.0)
+		cpuPercentOfSystemLimited = uint64((float64(cpuPercentOfSystem) / maxLimitedCpus) * maxCPUs)
+	}
+
+	ch <- prometheus.MustNewConstMetric(
+		containerCpuPercent,
+		prometheus.GaugeValue,
+		float64(cpuPercentOfSystemLimited),
+		hostname,
+		containerID,
+	)
+}
+
 func formatContainerMemLimitKiB(ch chan<- prometheus.Metric, hostname string, containerID string, stat docker.ContainerStats) {
 	ch <- prometheus.MustNewConstMetric(
 		containerMemLimitKiBDesc,

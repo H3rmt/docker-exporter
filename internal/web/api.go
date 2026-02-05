@@ -16,7 +16,7 @@ import (
 type infoResponse struct {
 	Hostname string `json:"hostname"`
 	Version  string `json:"version"`
-	HostIP   string `json:"host_ip"`
+	HostIP   string `json:"host_ip,omitempty"`
 }
 
 func HandleAPIInfo(version string) http.HandlerFunc {
@@ -24,9 +24,6 @@ func HandleAPIInfo(version string) http.HandlerFunc {
 		hn, _ := os.ReadFile("/etc/hostname")
 		hostname := strings.TrimSpace(string(hn))
 		hostIP := os.Getenv("IP")
-		if hostIP == "" {
-			hostIP = "???"
-		}
 		writeJSON(w, infoResponse{Hostname: hostname, Version: version, HostIP: hostIP})
 	}
 }
@@ -105,6 +102,7 @@ func HandleAPIContainers(cli *docker.Client) http.Handler {
 				var cpuPercentOfSystem uint64
 				var maxCPUs float64
 				var maxLimitedCpus float64
+				var cpuLimitedUsage uint64
 				if c.State == container.StateRunning {
 					if st, err := cli.GetContainerStats(ctx, c.ID); err == nil {
 						memKiB = st.MemoryUsageKiB
@@ -116,10 +114,13 @@ func HandleAPIContainers(cli *docker.Client) http.Handler {
 						maxCPUs = float64(st.Cpu.OnlineCpus)
 						if nanoCpus > 0 {
 							maxLimitedCpus = float64(nanoCpus) / 1000000000.0
+						} else {
+							maxLimitedCpus = maxCPUs
 						}
 						if sysDelta > 0 {
 							cpuPercentOfSystem = uint64(float64(cpuDelta) / float64(sysDelta) * 100.0)
 						}
+						cpuLimitedUsage = uint64((float64(cpuPercentOfSystem) / maxLimitedCpus) * maxCPUs)
 					}
 				}
 				stateStr := string(c.State)
@@ -135,7 +136,7 @@ func HandleAPIContainers(cli *docker.Client) http.Handler {
 					MemLimitKiB:     memLimitKiB,
 					CpuUsage:        cpuPercentOfSystem,
 					MaxCpus:         maxCPUs,
-					CpuLimitedUsage: uint64((float64(cpuPercentOfSystem) / maxLimitedCpus) * maxCPUs),
+					CpuLimitedUsage: cpuLimitedUsage,
 					MaxLimitedCpus:  maxLimitedCpus,
 				}
 

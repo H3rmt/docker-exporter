@@ -64,8 +64,8 @@ func init() {
 }
 
 var (
-	// Version can be set at build time using -ldflags "-X main.Version=x.y.z"
-	Version = "dev"
+	// Version can be set at build time using -ldflags "-X main.Version=vx.y.z"
+	Version = "main"
 )
 
 func main() {
@@ -85,6 +85,10 @@ func run(*cobra.Command, []string) {
 		"log_format", logFormat,
 	)
 	docker.SetSizeCacheDuration(sizeCacheDuration)
+
+	if os.Getenv("IP") == "" {
+		log.GetLogger().Info("IP environment variable not set, pass it do display the IP of the exporter on the homepage", "missing_env", "IP")
+	}
 
 	// Initialize Docker client and metrics
 	dockerClient, err := docker.NewDockerClient(dockerHost)

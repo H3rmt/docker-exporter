@@ -115,6 +115,18 @@ var (
 		[]string{"hostname", "container_id"},
 		nil,
 	)
+	containerCpuPercent = prometheus.NewDesc(
+		"docker_container_cpu_percent",
+		"Percentage of CPU used by the container (relative to max available CPU cores)",
+		[]string{"hostname", "container_id"},
+		nil,
+	)
+	containerCpuPercentHost = prometheus.NewDesc(
+		"docker_container_cpu_percent_host",
+		"Percentage of CPU used by the container (relative to host CPU cores)",
+		[]string{"hostname", "container_id"},
+		nil,
+	)
 	containerMemLimitKiBDesc = prometheus.NewDesc(
 		"docker_container_mem_limit_kib",
 		"Container memory limit in KiB",
@@ -259,6 +271,8 @@ func (c *DockerCollector) Collect(ch chan<- prometheus.Metric) {
 		formatContainerCpuMicroSeconds(ch, hostname, result.id, result.stat)
 		formatContainerCpuUserMicroSeconds(ch, hostname, result.id, result.stat)
 		formatContainerCpuKernelMicroSeconds(ch, hostname, result.id, result.stat)
+		formatContainerCpuPercentHost(ch, hostname, result.id, result.stat)
+		formatContainerCpuPercent(ch, hostname, result.id, result.stat, result.inspect)
 		formatContainerMemLimitKiB(ch, hostname, result.id, result.stat)
 		formatContainerMemUsageKiB(ch, hostname, result.id, result.stat)
 		formatContainerNetSendBytes(ch, hostname, result.id, result.stat)
