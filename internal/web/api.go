@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/h3rmt/docker-exporter/internal/docker"
+	"github.com/h3rmt/docker-exporter/internal/exporter"
 	"github.com/h3rmt/docker-exporter/internal/log"
 	"github.com/h3rmt/docker-exporter/internal/osinfo"
 	"github.com/moby/moby/api/types/container"
@@ -24,8 +25,7 @@ type infoResponse struct {
 
 func HandleAPIInfo(version string, osInfo osinfo.OSInfo) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		hn, _ := os.ReadFile("/etc/hostname")
-		hostname := strings.TrimSpace(string(hn))
+		hostname := exporter.GetHostname()
 		hostIP := os.Getenv("IP")
 		writeJSON(w, infoResponse{
 			Hostname:  hostname,
