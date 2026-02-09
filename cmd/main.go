@@ -15,6 +15,7 @@ import (
 	"github.com/h3rmt/docker-exporter/internal/docker"
 	"github.com/h3rmt/docker-exporter/internal/exporter"
 	"github.com/h3rmt/docker-exporter/internal/log"
+	"github.com/h3rmt/docker-exporter/internal/osinfo"
 	"github.com/h3rmt/docker-exporter/internal/status"
 	"github.com/h3rmt/docker-exporter/internal/web"
 
@@ -114,8 +115,9 @@ func run(*cobra.Command, []string) {
 	http.Handle("/status", status.HandleStatus(dockerClient, Version))
 	// Web UI and API
 	if homepage {
+		osInfo := osinfo.ReadOSRelease()
 		http.HandleFunc("/", web.HandleRoot())
-		http.HandleFunc("/api/info", web.HandleAPIInfo(Version))
+		http.HandleFunc("/api/info", web.HandleAPIInfo(Version, osInfo))
 		http.HandleFunc("/api/usage", web.HandleAPIUsage())
 		http.Handle("/api/containers", web.HandleAPIContainers(dockerClient))
 

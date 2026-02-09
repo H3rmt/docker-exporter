@@ -183,7 +183,7 @@ async function loadInfo(){
 	} else if (info.os_name !== 'Unknown') {
 		document.getElementById('os_info').textContent = info.os_name;
 	} else {
-		document.getElementById('os_info').textContent = 'OS: Unknown';
+		document.getElementById('os_info').textContent = 'Unknown';
 	}
   } catch(e){ console.error(e); }
 }

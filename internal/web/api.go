@@ -22,12 +22,11 @@ type infoResponse struct {
 	OSVersion string `json:"os_version"`
 }
 
-func HandleAPIInfo(version string) http.HandlerFunc {
+func HandleAPIInfo(version string, osInfo osinfo.OSInfo) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		hn, _ := os.ReadFile("/etc/hostname")
 		hostname := strings.TrimSpace(string(hn))
 		hostIP := os.Getenv("IP")
-		osInfo := osinfo.ReadOSRelease()
 		writeJSON(w, infoResponse{
 			Hostname:  hostname,
 			Version:   version,
