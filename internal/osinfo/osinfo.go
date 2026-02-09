@@ -23,13 +23,15 @@ type osInfoCache struct {
 }
 
 var cache = &osInfoCache{
-	ttl: 5 * time.Minute, // Refresh OS info every 5 minutes
+	ttl:      5 * time.Minute, // Refresh OS info every 5 minutes
+	lastRead: time.Time{},     // Zero time ensures first access will trigger a read
 }
 
 // GetCached returns the cached OS info, refreshing if needed
 func GetCached() OSInfo {
 	cache.mu.RLock()
-	if time.Since(cache.lastRead) < cache.ttl && cache.info.Name != "" {
+	// Check if cache is valid (within TTL and initialized)
+	if time.Since(cache.lastRead) < cache.ttl && !cache.lastRead.IsZero() {
 		info := cache.info
 		cache.mu.RUnlock()
 		return info
@@ -41,7 +43,7 @@ func GetCached() OSInfo {
 	defer cache.mu.Unlock()
 
 	// Double-check after acquiring write lock
-	if time.Since(cache.lastRead) < cache.ttl && cache.info.Name != "" {
+	if time.Since(cache.lastRead) < cache.ttl && !cache.lastRead.IsZero() {
 		return cache.info
 	}
 
