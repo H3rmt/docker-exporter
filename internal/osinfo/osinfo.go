@@ -4,12 +4,51 @@ import (
 	"bufio"
 	"os"
 	"strings"
+	"sync"
+	"time"
 )
 
 // OSInfo contains information from /etc/os-release
 type OSInfo struct {
 	Name      string
 	VersionID string
+}
+
+// osInfoCache provides thread-safe caching of OS info with TTL
+type osInfoCache struct {
+	mu       sync.RWMutex
+	info     OSInfo
+	lastRead time.Time
+	ttl      time.Duration
+}
+
+var cache = &osInfoCache{
+	ttl: 5 * time.Minute, // Refresh OS info every 5 minutes
+}
+
+// GetCached returns the cached OS info, refreshing if needed
+func GetCached() OSInfo {
+	cache.mu.RLock()
+	if time.Since(cache.lastRead) < cache.ttl && cache.info.Name != "" {
+		info := cache.info
+		cache.mu.RUnlock()
+		return info
+	}
+	cache.mu.RUnlock()
+
+	// Need to refresh
+	cache.mu.Lock()
+	defer cache.mu.Unlock()
+
+	// Double-check after acquiring write lock
+	if time.Since(cache.lastRead) < cache.ttl && cache.info.Name != "" {
+		return cache.info
+	}
+
+	// Read fresh OS info
+	cache.info = ReadOSRelease()
+	cache.lastRead = time.Now()
+	return cache.info
 }
 
 // ReadOSRelease reads and parses /etc/os-release file

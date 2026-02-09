@@ -5,7 +5,6 @@ import (
 	"os"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/h3rmt/docker-exporter/internal/docker"
 	"github.com/h3rmt/docker-exporter/internal/log"
@@ -14,48 +13,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-// hostnameCache provides thread-safe caching of the hostname
-type hostnameCache struct {
-	mu       sync.RWMutex
-	hostname string
-	lastRead time.Time
-	ttl      time.Duration
-}
-
-var cache = &hostnameCache{
-	ttl: 60 * time.Second, // Refresh hostname every 60 seconds
-}
-
-// Get returns the cached hostname, refreshing if needed
-func (c *hostnameCache) Get() string {
-	c.mu.RLock()
-	if time.Since(c.lastRead) < c.ttl && c.hostname != "" {
-		hostname := c.hostname
-		c.mu.RUnlock()
-		return hostname
-	}
-	c.mu.RUnlock()
-
-	// Need to refresh
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	// Double-check after acquiring write lock
-	if time.Since(c.lastRead) < c.ttl && c.hostname != "" {
-		return c.hostname
-	}
-
-	// Read fresh hostname
-	c.hostname = readHostnameFromFile()
-	c.lastRead = time.Now()
-	return c.hostname
-}
-
 // DockerCollector implements the prometheus.Collector interface
 type DockerCollector struct {
 	dockerClient *docker.Client
 	version      string
-	osInfo       osinfo.OSInfo
 }
 
 var (
@@ -239,7 +200,6 @@ func NewDockerCollector(client *docker.Client, version string) *DockerCollector 
 	return &DockerCollector{
 		dockerClient: client,
 		version:      version,
-		osInfo:       osinfo.ReadOSRelease(),
 	}
 }
 
@@ -264,13 +224,14 @@ func (c *DockerCollector) Collect(ch chan<- prometheus.Metric) {
 		c.version,
 	)
 	// Export OS information
+	osInfo := osinfo.GetCached()
 	ch <- prometheus.MustNewConstMetric(
 		hostOSInfoDesc,
 		prometheus.GaugeValue,
 		1,
 		hostname,
-		c.osInfo.Name,
-		c.osInfo.VersionID,
+		osInfo.Name,
+		osInfo.VersionID,
 	)
 	ctx := context.Background()
 
@@ -352,15 +313,6 @@ func RegisterCollectorsWithRegistry(cli *docker.Client, reg *prometheus.Registry
 }
 
 func getHostname() string {
-	return cache.Get()
-}
-
-// GetHostname returns the cached hostname, refreshing if needed
-func GetHostname() string {
-	return cache.Get()
-}
-
-func readHostnameFromFile() string {
 	hn, _ := os.ReadFile("/etc/hostname")
 	return strings.TrimSpace(string(hn))
 }

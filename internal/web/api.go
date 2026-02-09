@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/h3rmt/docker-exporter/internal/docker"
-	"github.com/h3rmt/docker-exporter/internal/exporter"
 	"github.com/h3rmt/docker-exporter/internal/log"
 	"github.com/h3rmt/docker-exporter/internal/osinfo"
 	"github.com/moby/moby/api/types/container"
@@ -23,10 +22,12 @@ type infoResponse struct {
 	OSVersion string `json:"os_version"`
 }
 
-func HandleAPIInfo(version string, osInfo osinfo.OSInfo) http.HandlerFunc {
+func HandleAPIInfo(version string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		hostname := exporter.GetHostname()
+		hn, _ := os.ReadFile("/etc/hostname")
+		hostname := strings.TrimSpace(string(hn))
 		hostIP := os.Getenv("IP")
+		osInfo := osinfo.GetCached()
 		writeJSON(w, infoResponse{
 			Hostname:  hostname,
 			Version:   version,
