@@ -177,7 +177,14 @@ async function loadInfo(){
 	document.getElementById('ip').textContent = info.host_ip;
 	document.getElementById('version').textContent = '(' + info.version + ')';
 	document.getElementById('link').href = 'https://github.com/h3rmt/docker-exporter/tree/' + info.version;
-	document.getElementById('os_info').textContent = info.os_name + ' ' + info.os_version;
+	// Only display OS info if it's not Unknown
+	if (info.os_name !== 'Unknown' && info.os_version !== 'Unknown') {
+		document.getElementById('os_info').textContent = info.os_name + ' ' + info.os_version;
+	} else if (info.os_name !== 'Unknown') {
+		document.getElementById('os_info').textContent = info.os_name;
+	} else {
+		document.getElementById('os_info').textContent = 'OS: Unknown';
+	}
   } catch(e){ console.error(e); }
 }
 

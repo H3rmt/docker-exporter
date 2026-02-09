@@ -17,6 +17,7 @@ import (
 type DockerCollector struct {
 	dockerClient *docker.Client
 	version      string
+	osInfo       osinfo.OSInfo
 }
 
 var (
@@ -200,6 +201,7 @@ func NewDockerCollector(client *docker.Client, version string) *DockerCollector 
 	return &DockerCollector{
 		dockerClient: client,
 		version:      version,
+		osInfo:       osinfo.ReadOSRelease(),
 	}
 }
 
@@ -224,14 +226,13 @@ func (c *DockerCollector) Collect(ch chan<- prometheus.Metric) {
 		c.version,
 	)
 	// Export OS information
-	osInfo := osinfo.ReadOSRelease()
 	ch <- prometheus.MustNewConstMetric(
 		hostOSInfoDesc,
 		prometheus.GaugeValue,
 		1,
 		hostname,
-		osInfo.Name,
-		osInfo.VersionID,
+		c.osInfo.Name,
+		c.osInfo.VersionID,
 	)
 	ctx := context.Background()
 
