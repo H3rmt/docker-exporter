@@ -16,6 +16,7 @@ The exporter provides the following metrics:
 | Metric Name                                     | Type    | Description                                                                                  | Labels                                                                    |
 |-------------------------------------------------|---------|----------------------------------------------------------------------------------------------|---------------------------------------------------------------------------|
 | `docker_exporter_info`                          | Gauge   | Information about the docker exporter                                                        | `hostname`, `version`                                                     |
+| `docker_exporter_host_os_info`                  | Gauge   | Information about the host operating system                                                  | `hostname`, `os_name`, `os_version`                                       |
 | `docker_container_info`                         | Gauge   | Container information                                                                        | `hostname`, `container_id`, `name`, `image_id`, `command`, `network_mode` |
 | `docker_container_name`                         | Gauge   | Name for the container (can be more than one)                                                | `hostname`, `container_id`, `name`                                        |
 | `docker_container_state`                        | Gauge   | Container State (0=created, 1=running, 2=paused, 3=restarting, 4=removing, 5=exited, 6=dead) | `hostname`, `container_id`                                                |
@@ -47,7 +48,10 @@ The exporter provides the following metrics:
 `docker_container_rootfs_size_bytes` and `docker_container_rw_size_bytes` are cached and only updated every 5 minutes.
 This can be customized with the --size-cache-seconds flag.
 
-`docker_container_cpu_percent` should probably be prefered over `docker_container_cpu_percent_host` as it takes the
+`docker_exporter_host_os_info` reads from `/etc/os-release` and is cached with a 5-minute TTL. This allows the exporter
+to detect OS version changes (e.g., after system updates) without requiring a container restart.
+
+`docker_container_cpu_percent` should probably be preferred over `docker_container_cpu_percent_host` as it takes the
 container's cgroup settings into account. (you can use `--cpus=3` to limit the container to only three cpu cores which
 this metric will report correctly)
 

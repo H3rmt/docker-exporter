@@ -8,6 +8,7 @@ import (
 
 	"github.com/h3rmt/docker-exporter/internal/docker"
 	"github.com/h3rmt/docker-exporter/internal/log"
+	"github.com/h3rmt/docker-exporter/internal/osinfo"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -23,6 +24,12 @@ var (
 		"docker_exporter_info",
 		"Information about the docker exporter",
 		[]string{"hostname", "version"},
+		nil,
+	)
+	hostOSInfoDesc = prometheus.NewDesc(
+		"docker_exporter_host_os_info",
+		"Information about the host operating system",
+		[]string{"hostname", "os_name", "os_version"},
 		nil,
 	)
 	containerInfoDesc = prometheus.NewDesc(
@@ -215,6 +222,16 @@ func (c *DockerCollector) Collect(ch chan<- prometheus.Metric) {
 		1,
 		hostname,
 		c.version,
+	)
+	// Export OS information
+	osInfo := osinfo.GetCached()
+	ch <- prometheus.MustNewConstMetric(
+		hostOSInfoDesc,
+		prometheus.GaugeValue,
+		1,
+		hostname,
+		osInfo.Name,
+		osInfo.VersionID,
 	)
 	ctx := context.Background()
 
