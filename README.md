@@ -48,6 +48,9 @@ The exporter provides the following metrics:
 `docker_container_rootfs_size_bytes` and `docker_container_rw_size_bytes` are cached and only updated every 5 minutes.
 This can be customized with the --size-cache-seconds flag.
 
+`docker_exporter_host_os_info` reads from `/etc/os-release` and is cached with a 5-minute TTL. This allows the exporter
+to detect OS version changes (e.g., after system updates) without requiring a container restart.
+
 `docker_container_cpu_percent` should probably be prefered over `docker_container_cpu_percent_host` as it takes the
 container's cgroup settings into account. (you can use `--cpus=3` to limit the container to only three cpu cores which
 this metric will report correctly)
