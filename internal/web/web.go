@@ -106,6 +106,7 @@ const pageTemplate = `<!doctype html>
         <a href="https://github.com/h3rmt/docker-exporter" target="_blank" id="link">Docker Exporter</a>
         <span id="version"></span>
       </div>
+      <div id="os_info" style="font-size: 14px; color: light-dark(#666, #aaa);"></div>
       <div>
         <a href="/metrics">metrics</a>
         <a href="/status">status</a>
@@ -170,12 +171,13 @@ function fmtTime(ts){
 
 async function loadInfo(){
   try{
-    /** @type { {hostname: string, host_ip?: string, version: string} } */
+    /** @type { {hostname: string, host_ip?: string, version: string, os_name: string, os_version: string} } */
 	const info = await fetchJSON('/api/info');
 	document.getElementById('host').textContent = info.hostname;
 	document.getElementById('ip').textContent = info.host_ip;
 	document.getElementById('version').textContent = '(' + info.version + ')';
 	document.getElementById('link').href = 'https://github.com/h3rmt/docker-exporter/tree/' + info.version;
+	document.getElementById('os_info').textContent = info.os_name + ' ' + info.os_version;
   } catch(e){ console.error(e); }
 }
 
@@ -199,8 +201,10 @@ console.log(cpuDataUser);
 console.log(cpuDataSystem);
 console.log(memData);
 
+let cpuChart, memChart;
+try {
 Chart.defaults.color = window.getComputedStyle(document.body).color;
-const cpuChart = new Chart(cpuCtx, { 
+cpuChart = new Chart(cpuCtx, { 
     type:'line',
 	data: {
 		labels,
@@ -240,7 +244,7 @@ const cpuChart = new Chart(cpuCtx, {
         }
     }
 });
-const memChart = new Chart(memCtx, { 
+memChart = new Chart(memCtx, { 
     type: 'line',
     data: {
         labels,
@@ -268,7 +272,11 @@ const memChart = new Chart(memCtx, {
         },
     }
 });
+} catch(e) {
+	console.error('Chart initialization failed:', e);
+}
 function addAnimated(values, chart) {
+    if (!chart) return;
     for (const array of values) {
 		const lastY = array[0][memData.length - 1];
 		array[0].push(lastY);

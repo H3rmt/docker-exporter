@@ -10,13 +10,16 @@ import (
 
 	"github.com/h3rmt/docker-exporter/internal/docker"
 	"github.com/h3rmt/docker-exporter/internal/log"
+	"github.com/h3rmt/docker-exporter/internal/osinfo"
 	"github.com/moby/moby/api/types/container"
 )
 
 type infoResponse struct {
-	Hostname string `json:"hostname"`
-	Version  string `json:"version"`
-	HostIP   string `json:"host_ip,omitempty"`
+	Hostname  string `json:"hostname"`
+	Version   string `json:"version"`
+	HostIP    string `json:"host_ip,omitempty"`
+	OSName    string `json:"os_name"`
+	OSVersion string `json:"os_version"`
 }
 
 func HandleAPIInfo(version string) http.HandlerFunc {
@@ -24,7 +27,14 @@ func HandleAPIInfo(version string) http.HandlerFunc {
 		hn, _ := os.ReadFile("/etc/hostname")
 		hostname := strings.TrimSpace(string(hn))
 		hostIP := os.Getenv("IP")
-		writeJSON(w, infoResponse{Hostname: hostname, Version: version, HostIP: hostIP})
+		osInfo := osinfo.ReadOSRelease()
+		writeJSON(w, infoResponse{
+			Hostname:  hostname,
+			Version:   version,
+			HostIP:    hostIP,
+			OSName:    osInfo.Name,
+			OSVersion: osInfo.VersionID,
+		})
 	}
 }
 
