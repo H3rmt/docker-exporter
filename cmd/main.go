@@ -155,11 +155,20 @@ func run(*cobra.Command, []string) {
 	go func() {
 		log.GetLogger().Info("Collecting initial metrics in background...")
 		ctx := context.Background()
+		
 		// Perform an initial collection to warm up caches
-		_, err := dockerClient.ListAllRunningContainers(ctx)
+		containers, err := dockerClient.ListAllRunningContainers(ctx)
 		if err != nil {
 			log.GetLogger().Warn("Initial container listing failed", "error", err)
+		} else {
+			// Warm up by inspecting and getting stats for all containers
+			log.GetLogger().Debug("Warming up container stats cache", "count", len(containers))
+			for _, container := range containers {
+				_, _ = dockerClient.InspectContainer(ctx, container.ID, true)
+				_, _ = dockerClient.GetContainerStats(ctx, container.ID)
+			}
 		}
+		
 		log.GetLogger().Info("Initial metrics collection complete")
 		status.SetReady()
 	}()
