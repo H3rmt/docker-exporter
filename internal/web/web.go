@@ -208,6 +208,28 @@ const pageTemplate = `<!doctype html>
 			border: 1px solid light-dark(#ddd, #373737); 
 			font-size: 13px;
 		}
+
+		.status-badge {
+			padding: 4px 8px;
+			border-radius: 4px;
+			font-size: 12px;
+			font-weight: 500;
+		}
+
+		.status-starting {
+			background: light-dark(#fef3c7, #451a03);
+			color: light-dark(#92400e, #fbbf24);
+		}
+
+		.status-healthy {
+			background: light-dark(#d1fae5, #064e3b);
+			color: light-dark(#065f46, #34d399);
+		}
+
+		.status-unhealthy {
+			background: light-dark(#fee2e2, #7f1d1d);
+			color: light-dark(#991b1b, #f87171);
+		}
     </style>
 </head>
 <body>
@@ -224,6 +246,7 @@ const pageTemplate = `<!doctype html>
             <div style="display: flex; gap: 16px; margin-top: 2px; align-items: center;">
                 <a href="/metrics" target="_blank" class="button">metrics</a>
                 <a href="/status" target="_blank" class="button">status</a>
+            	<span id="status_badge" class="status-badge status-starting" style="display: none;">Starting...</span>
             	<div id="os_info" style="font-size: 13px; color: light-dark(#666, #aaa); text-align: right;"></div>
             </div>
         </div>
@@ -296,6 +319,36 @@ const pageTemplate = `<!doctype html>
         if (!ts) return '-';
         const d = new Date(ts * 1000);
         return d.toLocaleString();
+    }
+
+    async function checkStatus() {
+        try {
+            /** @type { {status: string, version: string, docker_version?: string, docker_error?: string} } */
+            const status = await fetchJSON('/status');
+            const badge = document.getElementById('status_badge');
+            
+            if (status.status === 'starting') {
+                badge.className = 'status-badge status-starting';
+                badge.textContent = 'Starting...';
+                badge.style.display = 'inline-block';
+                return false;
+            } else if (status.status === 'healthy') {
+                badge.style.display = 'none';
+                return true;
+            } else if (status.status === 'unhealthy') {
+                badge.className = 'status-badge status-unhealthy';
+                badge.textContent = 'Unhealthy';
+                badge.style.display = 'inline-block';
+                return true;
+            }
+        } catch (e) {
+            console.error('Status check failed:', e);
+            const badge = document.getElementById('status_badge');
+            badge.className = 'status-badge status-unhealthy';
+            badge.textContent = 'Error';
+            badge.style.display = 'inline-block';
+        }
+        return false;
     }
 
     async function loadInfo() {
@@ -562,17 +615,33 @@ const pageTemplate = `<!doctype html>
         }
     }
 
-    loadInfo();
-    tick();
-    loadContainers();
-    setInterval(tick, 2000);
-    setInterval(loadContainers, 30000);
-    document.getElementById('updateBtn').addEventListener('click', loadContainers);
-    // remove flex: 1 css attribute from cards
-    const cards = Array.from(document.getElementsByClassName('card-container'));
-    cards.map((i) => i.classList.replace("card-container", "card-container-no-flex"))
-    document.getElementById('totalMem').innerText = fmtBytesKiB(parseInt("{{.TotalMem}}"));
-    document.getElementById('totalCPU').innerText = "{{.CpuCount}} Cores";
+    // Initialize page
+    (async function init() {
+        // Check status first and poll until ready
+        let isReady = await checkStatus();
+        
+        if (!isReady) {
+            // Poll status every second until ready
+            const statusInterval = setInterval(async () => {
+                isReady = await checkStatus();
+                if (isReady) {
+                    clearInterval(statusInterval);
+                }
+            }, 1000);
+        }
+        
+        loadInfo();
+        tick();
+        loadContainers();
+        setInterval(tick, 2000);
+        setInterval(loadContainers, 30000);
+        document.getElementById('updateBtn').addEventListener('click', loadContainers);
+        // remove flex: 1 css attribute from cards
+        const cards = Array.from(document.getElementsByClassName('card-container'));
+        cards.map((i) => i.classList.replace("card-container", "card-container-no-flex"))
+        document.getElementById('totalMem').innerText = fmtBytesKiB(parseInt("{{.TotalMem}}"));
+        document.getElementById('totalCPU').innerText = "{{.CpuCount}} Cores";
+    })();
 </script>
 </body>
 </html>`
