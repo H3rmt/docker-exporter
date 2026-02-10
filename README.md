@@ -148,9 +148,9 @@ go build -o docker-exporter ./cmd/main.go
 docker run -d --name docker-exporter \
   -e IP="$(ip route get 1.1.1.1 | head -1 | awk '{print $7}')" \
   -e TZ="Europe/Berlin" -p 9100:9100 \
-  -v /var/run/docker.sock:/var/run/docker.sock:ro \
-  -v /etc/hostname:/etc/hostname:ro -v /proc/stat:/proc/stat:ro -v /proc/meminfo:/proc/meminfo:ro \
-  ghcr.io/h3rmt/docker-exporter:latest -p 9100 --log-format json
+  -v /var/run/docker.sock:/var/run/docker.sock:ro -v /proc/stat:/proc/stat:ro -v /proc/meminfo:/proc/meminfo:ro \ 
+  -v /etc/hostname:/etc/hostname:ro -v /etc/os-release:/etc/os-release:ro \
+  ghcr.io/h3rmt/docker-exporter:latest -p 9100 --log-format logfmt --verbose
 ```
 
 ## Run with docker-compose
@@ -167,11 +167,12 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /etc/hostname:/etc/hostname:ro
+      - /etc/os-release:/etc/os-release:ro
       - /proc/stat:/proc/stat:ro
       - /proc/meminfo:/proc/meminfo:ro
     ports:
       - 9100:9100
-    command: [ "--size-cache-seconds=600", "-v" ]
+    command: [ "--size-cache-seconds=600", "--log-format=json" ]
 ```
 
 ### Running in docker in lxc
@@ -216,10 +217,11 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /etc/hostname:/etc/hostname:ro
+      - /etc/os-release:/etc/os-release:ro
       - /proc/stat:/proc/stat:ro
       # mount the meminfo file from the script as a volume
       - ./meminfo:/proc/meminfo:ro
     ports:
       - 9100:9100
-    command: [ "--size-cache-seconds=600" ]
+    command: [ "--size-cache-seconds=600", "--internal-metrics" ]
 ```
