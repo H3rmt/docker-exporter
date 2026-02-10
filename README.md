@@ -52,7 +52,7 @@ This can be customized with the --size-cache-seconds flag.
 to detect OS version changes (e.g., after system updates) without requiring a container restart.
 
 `docker_container_cpu_percent` should probably be preferred over `docker_container_cpu_percent_host` as it takes the
-container's cgroup settings into account. (you can use `--cpus=3` to limit the container to only three cpu cores which
+container's cgroup settings into account. (you can use `--cpus=3` to limit a container to only three cpu cores which
 this metric will report correctly)
 
 ![dashboard_preview](.github/imgs/img_1.png)
@@ -79,6 +79,7 @@ this metric will report correctly)
 - `/metrics` - Prometheus metrics endpoint
 - `/status` - Status endpoint
 - `/` - Homepage with live charts
+- `/api` - Api used by homepage for graphs and container info
 
 <table>
   <tr>
@@ -136,12 +137,6 @@ Example JSON output:
 ./docker-exporter --internal-metrics --docker-host tcp://127.0.0.1:2375
 ```
 
-## Building from source
-
-```bash
-go build -o docker-exporter ./cmd/main.go
-```
-
 ## Run with docker
 
 ```bash
@@ -175,6 +170,12 @@ services:
     command: [ "--size-cache-seconds=600", "--log-format=json" ]
 ```
 
+## Building from source
+
+```bash
+go build -o docker-exporter ./cmd/main.go
+```
+
 ### Running in docker in lxc
 
 When running in docker in lxc mem and cpu metrics are either collected from the host or from the container depending on
@@ -203,7 +204,7 @@ sleep 2
 done
 ```
 
-Start this script as a daemon.
+Start this script as a daemon and mount the resulting file as a volume.
 
 ```yaml
 services:
