@@ -3,16 +3,29 @@ package status
 import (
 	"encoding/json"
 	"net/http"
+	"sync/atomic"
 
 	"github.com/h3rmt/docker-exporter/internal/docker"
 	"github.com/h3rmt/docker-exporter/internal/log"
 )
+
+var ready atomic.Bool
 
 type Response struct {
 	Status        string `json:"status"`
 	DockerError   string `json:"docker_error,omitempty"`
 	DockerVersion string `json:"docker_version,omitempty"`
 	Version       string `json:"version"`
+}
+
+// SetReady marks the exporter as ready to serve metrics
+func SetReady() {
+	ready.Store(true)
+}
+
+// IsReady returns true if the exporter is ready to serve metrics
+func IsReady() bool {
+	return ready.Load()
 }
 
 func HandleStatus(cli *docker.Client, version string) http.Handler {
@@ -25,6 +38,14 @@ func HandleStatus(cli *docker.Client, version string) http.Handler {
 			DockerError:   "",
 			DockerVersion: "",
 			Version:       version,
+		}
+
+		// Check if ready
+		if !IsReady() {
+			response.Status = "starting"
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_ = json.NewEncoder(w).Encode(response)
+			return
 		}
 
 		// Check if Docker daemon is responding
