@@ -621,13 +621,29 @@ const pageTemplate = `<!doctype html>
         let isReady = await checkStatus();
         
         if (!isReady) {
-            // Poll status every second until ready
+            // Poll status every second until ready (max 30 attempts = 30 seconds)
+            let attempts = 0;
+            const maxAttempts = 30;
             const statusInterval = setInterval(async () => {
+                attempts++;
                 isReady = await checkStatus();
-                if (isReady) {
+                if (isReady || attempts >= maxAttempts) {
                     clearInterval(statusInterval);
+                    if (!isReady) {
+                        console.error('Server failed to become ready after 30 seconds');
+                        const badge = document.getElementById('status_badge');
+                        badge.className = 'status-badge status-unhealthy';
+                        badge.textContent = 'Startup timeout';
+                        badge.style.display = 'inline-block';
+                    }
                 }
             }, 1000);
+        }
+        
+        // Wait until ready before starting background updates
+        while (!isReady) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            isReady = await checkStatus();
         }
         
         loadInfo();

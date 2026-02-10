@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -160,13 +161,26 @@ func run(*cobra.Command, []string) {
 		containers, err := dockerClient.ListAllRunningContainers(ctx)
 		if err != nil {
 			log.GetLogger().Warn("Initial container listing failed", "error", err)
-		} else {
-			// Warm up by inspecting and getting stats for all containers
+		} else if len(containers) > 0 {
+			// Warm up by inspecting and getting stats for all containers concurrently
 			log.GetLogger().Debug("Warming up container stats cache", "count", len(containers))
+			
+			var wg sync.WaitGroup
+			// Use a semaphore to limit concurrent requests
+			sem := make(chan struct{}, 10)
+			
 			for _, container := range containers {
-				_, _ = dockerClient.InspectContainer(ctx, container.ID, true)
-				_, _ = dockerClient.GetContainerStats(ctx, container.ID)
+				wg.Add(1)
+				go func(c docker.ContainerInfo) {
+					defer wg.Done()
+					sem <- struct{}{}        // acquire
+					defer func() { <-sem }() // release
+					
+					_, _ = dockerClient.InspectContainer(ctx, c.ID, true)
+					_, _ = dockerClient.GetContainerStats(ctx, c.ID)
+				}(container)
 			}
+			wg.Wait()
 		}
 		
 		log.GetLogger().Info("Initial metrics collection complete")
