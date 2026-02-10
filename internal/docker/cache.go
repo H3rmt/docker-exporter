@@ -37,6 +37,7 @@ func (c *Client) getCachedValues(ctx context.Context) map[string]sizeEntry {
 		c.sizeMu.Unlock()
 		return cached
 	}
+	log.GetLogger().DebugContext(ctx, "Refreshing container sizes", "stale", stale, "cacheExists", cacheExists)
 
 	// currently refreshing
 	if c.sizeRefreshing {
@@ -53,9 +54,9 @@ func (c *Client) getCachedValues(ctx context.Context) map[string]sizeEntry {
 		c.sizeMu.Unlock()
 		select {
 		case <-ch:
-		case <-ctx.Done():
-			// Context canceled; return empty snapshot to avoid blocking caller indefinitely
-			return map[string]sizeEntry{}
+			// don't return when parent context is done, we still want to persist the loaded data
+			//case <-ctx.Done():
+			//	return map[string]sizeEntry{}
 		}
 		c.sizeMu.Lock()
 		// After completion, return whatever cache we have (may be empty)
@@ -69,14 +70,16 @@ func (c *Client) getCachedValues(ctx context.Context) map[string]sizeEntry {
 	c.sizeRefreshCh = ch
 	c.sizeRefreshing = true
 	// Start background refresh with background context to ensure progress independent of request context
-	go c.refreshSizes()
+	ctx2 := context.Background()
+	go c.refreshSizes(ctx2)
 	if !cacheExists {
-		// Block until initial cache is ready
+		// Block until the initial cache is ready
 		c.sizeMu.Unlock()
 		select {
 		case <-ch:
-		case <-ctx.Done():
-			return map[string]sizeEntry{}
+			// don't return when parent context is done, we still want to persist the loaded data
+			//case <-ctx.Done():
+			//	return map[string]sizeEntry{}
 		}
 		c.sizeMu.Lock()
 		cached := copySizeCache(c.sizeCache)
@@ -90,9 +93,8 @@ func (c *Client) getCachedValues(ctx context.Context) map[string]sizeEntry {
 }
 
 // refreshSizes fetches ContainerList with Size:true and updates the cache.
-func (c *Client) refreshSizes() {
+func (c *Client) refreshSizes(ctx context.Context) {
 	// Perform the expensive call
-	ctx := context.Background()
 	containers, err := c.client.ContainerList(ctx, client.ContainerListOptions{
 		All:  true,
 		Size: true,
@@ -104,7 +106,7 @@ func (c *Client) refreshSizes() {
 			sizes[item.ID] = sizeEntry{SizeRootFs: item.SizeRootFs, SizeRw: item.SizeRw}
 		}
 	} else {
-		log.GetLogger().Error("Failed to refresh container sizes", "error", err)
+		log.GetLogger().ErrorContext(ctx, "Failed to refresh container sizes", "error", err)
 	}
 
 	// Update cache state

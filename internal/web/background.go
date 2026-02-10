@@ -24,11 +24,11 @@ func CollectInBg() {
 	data = make([]DataPoint, DataPoints)
 	usage, usageUser, usageSystem, err := readCPUInfo(ctx, 1000*time.Millisecond)
 	if err != nil {
-		log.GetLogger().Error("failed to read cpu", "error", err)
+		log.GetLogger().ErrorContext(ctx, "failed to read cpu", "error", err)
 	}
 	mem, err := readMemPercent(ctx)
 	if err != nil {
-		log.GetLogger().Error("failed to read ram", "error", err)
+		log.GetLogger().ErrorContext(ctx, "failed to read ram", "error", err)
 	}
 	now := time.Now()
 	for i := 0; i < len(data); i++ {
@@ -45,11 +45,11 @@ func CollectInBg() {
 		//log.GetLogger().Debug("collecting data")
 		usage, usageUser, usageSystem, err := readCPUInfo(ctx, Delay/2)
 		if err != nil {
-			log.GetLogger().Error("failed to read cpu", "error", err)
+			log.GetLogger().ErrorContext(ctx, "failed to read cpu", "error", err)
 		}
 		mem, err := readMemPercent(ctx)
 		if err != nil {
-			log.GetLogger().Error("failed to read ram", "error", err)
+			log.GetLogger().ErrorContext(ctx, "failed to read ram", "error", err)
 		}
 		now := time.Now()
 		data[index] = DataPoint{Time: now, Data: UsageResponse{CPUPercent: usage, CPUPercentUser: usageUser, CPUPercentSystem: usageSystem, MemPercent: mem}}
