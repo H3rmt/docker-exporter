@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1](https://github.com/H3rmt/docker-exporter/compare/v1.3.0...v1.3.1) (2026-02-10)
+
+
+### Bug Fixes
+
+* improve homepage version info ([c31028f](https://github.com/H3rmt/docker-exporter/commit/c31028f46c3190ead3b69405076321cb0bb522f4))
+
 ## [1.3.0](https://github.com/H3rmt/docker-exporter/compare/v1.2.0...v1.3.0) (2026-02-05)
 
 
