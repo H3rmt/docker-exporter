@@ -26,20 +26,21 @@ import (
 )
 
 var (
-	verbose           bool
-	trace             bool
-	quiet             bool
-	internalMetrics   bool
-	logFormat         string
-	homepage          bool
-	sizeCacheDuration time.Duration
-	address           string
-	port              string
-	dockerHost        string
-	collectorSystem   bool
-	collectorContainer bool
-	collectorNetwork  bool
-	collectorVolumes  bool
+	verbose                   bool
+	trace                     bool
+	quiet                     bool
+	internalMetrics           bool
+	logFormat                 string
+	homepage                  bool
+	sizeCacheDuration         time.Duration
+	address                   string
+	port                      string
+	dockerHost                string
+	collectorSystem           bool
+	collectorContainer        bool
+	collectorContainerNetwork bool
+	collectorContainerFS      bool
+	collectorContainerStats   bool
 )
 
 var rootCmd = &cobra.Command{
@@ -70,9 +71,10 @@ func init() {
 	rootCmd.Flags().StringVarP(&port, "port", "p", "9100", "Port to listen on.")
 	rootCmd.Flags().StringVarP(&dockerHost, "docker-host", "d", "unix:///var/run/docker.sock", "Host to connect to.")
 	rootCmd.Flags().BoolVar(&collectorSystem, "collector.system", true, "Enable system collector (exporter info, host OS info).")
-	rootCmd.Flags().BoolVar(&collectorContainer, "collector.container", true, "Enable container collector (container metrics).")
-	rootCmd.Flags().BoolVar(&collectorNetwork, "collector.network", true, "Enable network collector (network metrics).")
-	rootCmd.Flags().BoolVar(&collectorVolumes, "collector.volumes", true, "Enable volumes collector (volume size metrics).")
+	rootCmd.Flags().BoolVar(&collectorContainer, "collector.container", true, "Enable container collector.")
+	rootCmd.Flags().BoolVar(&collectorContainerNetwork, "collector.container.network", true, "Enable container network collector.")
+	rootCmd.Flags().BoolVar(&collectorContainerFS, "collector.container.fs", true, "Enable container fs collector.")
+	rootCmd.Flags().BoolVar(&collectorContainerStats, "collector.container.stats", true, "Enable container stats collector.")
 }
 
 var (
@@ -111,10 +113,11 @@ func run(*cobra.Command, []string) {
 
 	log.GetLogger().Info("Initializing Docker Prometheus exporter...")
 	collectorConfig := exporter.CollectorConfig{
-		System:    collectorSystem,
-		Container: collectorContainer,
-		Network:   collectorNetwork,
-		Volumes:   collectorVolumes,
+		System:           collectorSystem,
+		Container:        collectorContainer || collectorContainerNetwork || collectorContainerFS || collectorContainerStats,
+		ContainerNetwork: collectorContainerNetwork,
+		ContainerFS:      collectorContainerFS,
+		ContainerStats:   collectorContainerStats,
 	}
 	var reg prometheus.Gatherer
 	if internalMetrics {

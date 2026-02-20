@@ -16,10 +16,11 @@ import (
 
 // CollectorConfig holds which collector groups are enabled
 type CollectorConfig struct {
-	System    bool
-	Container bool
-	Network   bool
-	Volumes   bool
+	System           bool
+	Container        bool
+	ContainerNetwork bool
+	ContainerFS      bool
+	ContainerStats   bool
 }
 
 // DockerCollector implements the prometheus.Collector interface
@@ -84,18 +85,6 @@ var (
 		[]string{"hostname", "container_id"},
 		nil,
 	)
-	containerSizeRootFsDesc = prometheus.NewDesc(
-		"docker_container_rootfs_size_bytes",
-		"Size of rootfs in this container in bytes",
-		[]string{"hostname", "container_id"},
-		nil,
-	)
-	containerSizeRwDesc = prometheus.NewDesc(
-		"docker_container_rw_size_bytes",
-		"Size of files that have been created or changed by this container in bytes",
-		[]string{"hostname", "container_id"},
-		nil,
-	)
 	containerRestartCountDesc = prometheus.NewDesc(
 		"docker_container_restart_count",
 		"Number of times the container has been restarted",
@@ -105,6 +94,18 @@ var (
 	containerExitCodeDesc = prometheus.NewDesc(
 		"docker_container_exit_code",
 		"Exit code of the container",
+		[]string{"hostname", "container_id"},
+		nil,
+	)
+	containerSizeRootFsDesc = prometheus.NewDesc(
+		"docker_container_rootfs_size_bytes",
+		"Size of rootfs in this container in bytes",
+		[]string{"hostname", "container_id"},
+		nil,
+	)
+	containerSizeRwDesc = prometheus.NewDesc(
+		"docker_container_rw_size_bytes",
+		"Size of files that have been created or changed by this container in bytes",
 		[]string{"hostname", "container_id"},
 		nil,
 	)
@@ -224,7 +225,15 @@ func (c *DockerCollector) Describe(ch chan<- *prometheus.Desc) {
 		for _, desc := range []*prometheus.Desc{
 			containerInfoDesc, containerNameDesc, containerStateDesc, containerCreatedDesc,
 			containerPortsDesc, containerStartedDesc, containerFinishedAtDesc,
-			containerRestartCountDesc, containerExitCodeDesc, containerPidsDesc,
+			containerRestartCountDesc, containerExitCodeDesc,
+		} {
+			ch <- desc
+		}
+	}
+
+	if c.config.ContainerStats {
+		for _, desc := range []*prometheus.Desc{
+			containerPidsDesc,
 			containerCpuUserNSDesc, containerCpuKernelNSDesc, containerCpuNSDesc, containerCpuPercent, containerCpuPercentHost,
 			containerMemLimitKiBDesc, containerMemUsageKiBDesc,
 			containerBlockInputBytesDesc, containerBlockOutputBytesDesc,
@@ -233,7 +242,7 @@ func (c *DockerCollector) Describe(ch chan<- *prometheus.Desc) {
 		}
 	}
 
-	if c.config.Network {
+	if c.config.ContainerNetwork {
 		for _, desc := range []*prometheus.Desc{
 			containerNetSendBytesDesc, containerNetSendDroppedDesc, containerNetSendErrorsDesc,
 			containerNetRecvBytesDesc, containerNetRecvDroppedDesc, containerNetRecvErrorsDesc,
@@ -242,7 +251,7 @@ func (c *DockerCollector) Describe(ch chan<- *prometheus.Desc) {
 		}
 	}
 
-	if c.config.Volumes {
+	if c.config.ContainerFS {
 		ch <- containerSizeRootFsDesc
 		ch <- containerSizeRwDesc
 	}
@@ -280,7 +289,7 @@ func (c *DockerCollector) Collect(ch chan<- prometheus.Metric) {
 		)
 	}
 
-	if !c.config.Container && !c.config.Network && !c.config.Volumes {
+	if !c.config.Container {
 		return
 	}
 
@@ -290,15 +299,13 @@ func (c *DockerCollector) Collect(ch chan<- prometheus.Metric) {
 		return
 	}
 
-	if c.config.Container {
-		formatContainerInfo(ch, hostname, containerInfo)
-		formatContainerNames(ch, hostname, containerInfo)
-		formatContainerState(ch, hostname, containerInfo)
-		formatContainerCreated(ch, hostname, containerInfo)
-		formatContainerPorts(ch, hostname, containerInfo)
-	}
+	formatContainerInfo(ch, hostname, containerInfo)
+	formatContainerNames(ch, hostname, containerInfo)
+	formatContainerState(ch, hostname, containerInfo)
+	formatContainerCreated(ch, hostname, containerInfo)
+	formatContainerPorts(ch, hostname, containerInfo)
 
-	needInspect := c.config.Container || c.config.Volumes
+	needStat := c.config.ContainerStats || c.config.ContainerNetwork
 
 	resultCh := make(chan containerResult, len(containerInfo))
 	var wg sync.WaitGroup
@@ -309,20 +316,19 @@ func (c *DockerCollector) Collect(ch chan<- prometheus.Metric) {
 			defer wg.Done()
 			id := container.ID
 
-			var inspect docker.ContainerInspect
-			if needInspect {
-				var err error
-				inspect, err = c.dockerClient.InspectContainer(ctx, id, c.config.Volumes)
-				if err != nil {
-					log.GetLogger().WarnContext(ctx, "Failed to inspect container", "error", err, "container_id", id)
-					return
-				}
+			inspect, err := c.dockerClient.InspectContainer(ctx, id, c.config.ContainerFS)
+			if err != nil {
+				log.GetLogger().WarnContext(ctx, "Failed to inspect container", "error", err, "container_id", id)
+				return
 			}
 
-			stat, err := c.dockerClient.GetContainerStats(ctx, id)
-			if err != nil {
-				log.GetLogger().WarnContext(ctx, "Failed to get container stats", "error", err, "container_id", id)
-				return
+			var stat docker.ContainerStats
+			if needStat {
+				stat, err = c.dockerClient.GetContainerStats(ctx, id)
+				if err != nil {
+					log.GetLogger().WarnContext(ctx, "Failed to get container stats", "error", err, "container_id", id)
+					return
+				}
 			}
 
 			resultCh <- containerResult{id: id, stat: stat, inspect: inspect}
@@ -337,9 +343,17 @@ func (c *DockerCollector) Collect(ch chan<- prometheus.Metric) {
 	for result := range resultCh {
 		if c.config.Container {
 			formatContainerStarted(ch, hostname, result.id, result.inspect)
+			formatContainerFinished(ch, hostname, result.id, result.inspect)
 			formatContainerExitCode(ch, hostname, result.id, result.inspect)
 			formatContainerRestartCount(ch, hostname, result.id, result.inspect)
-			formatContainerFinished(ch, hostname, result.id, result.inspect)
+		}
+
+		if c.config.ContainerFS {
+			formatContainerSizeRootFs(ch, hostname, result.id, result.inspect)
+			formatContainerSizeRw(ch, hostname, result.id, result.inspect)
+		}
+
+		if c.config.ContainerStats {
 			formatContainerPids(ch, hostname, result.id, result.stat)
 			formatContainerCpuMicroSeconds(ch, hostname, result.id, result.stat)
 			formatContainerCpuUserMicroSeconds(ch, hostname, result.id, result.stat)
@@ -352,18 +366,13 @@ func (c *DockerCollector) Collect(ch chan<- prometheus.Metric) {
 			formatBlockInputBytes(ch, hostname, result.id, result.stat)
 		}
 
-		if c.config.Network {
+		if c.config.ContainerNetwork {
 			formatContainerNetSendBytes(ch, hostname, result.id, result.stat)
 			formatContainerNetSendDropped(ch, hostname, result.id, result.stat)
 			formatContainerNetSendErrors(ch, hostname, result.id, result.stat)
 			formatContainerNetRecvBytes(ch, hostname, result.id, result.stat)
 			formatContainerNetRecvDropped(ch, hostname, result.id, result.stat)
 			formatContainerNetRecvErrors(ch, hostname, result.id, result.stat)
-		}
-
-		if c.config.Volumes {
-			formatContainerSizeRootFs(ch, hostname, result.id, result.inspect)
-			formatContainerSizeRw(ch, hostname, result.id, result.inspect)
 		}
 	}
 }
