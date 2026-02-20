@@ -2,10 +2,11 @@ package osinfo
 
 import (
 	"bufio"
+	"context"
 	"os"
 	"strings"
-	"sync"
-	"time"
+
+	"github.com/h3rmt/docker-exporter/internal/log"
 )
 
 // OSInfo contains information from /etc/os-release
@@ -14,48 +15,7 @@ type OSInfo struct {
 	VersionID string
 }
 
-// osInfoCache provides thread-safe caching of OS info with TTL
-type osInfoCache struct {
-	mu       sync.RWMutex
-	info     OSInfo
-	lastRead time.Time
-	ttl      time.Duration
-}
-
-var cache = &osInfoCache{
-	ttl:      5 * time.Minute, // Refresh OS info every 5 minutes
-	lastRead: time.Time{},     // Zero time ensures first access will trigger a read
-}
-
-// GetCached returns the cached OS info, refreshing if needed
-func GetCached() OSInfo {
-	cache.mu.RLock()
-	// Check if cache is valid (within TTL and initialized)
-	if time.Since(cache.lastRead) < cache.ttl && !cache.lastRead.IsZero() {
-		info := cache.info
-		cache.mu.RUnlock()
-		return info
-	}
-	cache.mu.RUnlock()
-
-	// Need to refresh
-	cache.mu.Lock()
-	defer cache.mu.Unlock()
-
-	// Double-check after acquiring write lock
-	if time.Since(cache.lastRead) < cache.ttl && !cache.lastRead.IsZero() {
-		return cache.info
-	}
-
-	// Read fresh OS info
-	cache.info = ReadOSRelease()
-	cache.lastRead = time.Now()
-	return cache.info
-}
-
-// ReadOSRelease reads and parses /etc/os-release file
-// Returns OSInfo with Name and VersionID, or "Unknown" values if the file doesn't exist (e.g., on Windows)
-func ReadOSRelease() OSInfo {
+func GetOSInfo(ctx context.Context) OSInfo {
 	info := OSInfo{
 		Name:      "Unknown",
 		VersionID: "Unknown",
@@ -66,7 +26,12 @@ func ReadOSRelease() OSInfo {
 		// File doesn't exist (e.g., on Windows)
 		return info
 	}
-	defer file.Close()
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+			log.GetLogger().WarnContext(ctx, "Failed to close /etc/os-release file", "error", err)
+		}
+	}(file)
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {

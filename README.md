@@ -118,6 +118,38 @@ Example JSON output:
 }
 ```
 
+### Status endpoint
+
+- Healthy
+  ```json
+  {
+    "status": "healthy",
+    "dockerVersion": "1.53",
+    "version": "v1.3.1"
+  }
+  ```
+- Starting
+  ```json
+  {
+    "status": "starting",
+    "dockerVersion": "1.53",
+    "version": "v1.3.1"
+  }
+  ```
+
+- Unhealthy
+  ```json
+  {
+    "status": "unhealthy",
+    "errors": {
+      "ListAllRunningContainers": "Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?",
+      "readHostname": "open /etc/hostname: no such file or directory"
+    },
+    "dockerError": "Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?",
+    "version": "v1.3.1"
+  }
+  ```
+
 ### Running the exporter
 
 ```bash

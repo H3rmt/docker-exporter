@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/h3rmt/docker-exporter/internal/glob"
 	"github.com/h3rmt/docker-exporter/internal/log"
 	"github.com/moby/moby/client"
 )
@@ -37,7 +38,6 @@ func (c *Client) getCachedValues(ctx context.Context) map[string]sizeEntry {
 		c.sizeMu.Unlock()
 		return cached
 	}
-	log.GetLogger().DebugContext(ctx, "Refreshing container sizes", "stale", stale, "cacheExists", cacheExists)
 
 	// currently refreshing
 	if c.sizeRefreshing {
@@ -64,6 +64,8 @@ func (c *Client) getCachedValues(ctx context.Context) map[string]sizeEntry {
 		c.sizeMu.Unlock()
 		return cached
 	}
+
+	log.GetLogger().InfoContext(ctx, "Refreshing container sizes", "stale", stale, "cacheExists", cacheExists)
 
 	// Need to start a refresh
 	ch := make(chan struct{})
@@ -101,12 +103,14 @@ func (c *Client) refreshSizes(ctx context.Context) {
 	})
 	// Prepare results
 	sizes := make(map[string]sizeEntry)
-	if err == nil {
+	if err != nil {
+		glob.SetError("refreshSizes", &err)
+		log.GetLogger().ErrorContext(ctx, "Failed to refresh container sizes", "error", err)
+	} else {
+		glob.SetError("refreshSizes", nil)
 		for _, item := range containers.Items {
 			sizes[item.ID] = sizeEntry{SizeRootFs: item.SizeRootFs, SizeRw: item.SizeRw}
 		}
-	} else {
-		log.GetLogger().ErrorContext(ctx, "Failed to refresh container sizes", "error", err)
 	}
 
 	// Update cache state
