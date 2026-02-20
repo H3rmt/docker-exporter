@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -118,7 +119,7 @@ func run(*cobra.Command, []string) {
 	log.GetLogger().Info("HTTP server created")
 	go func() {
 		log.GetLogger().Info("Listening on metrics endpoint", "address", fmt.Sprintf("%s:%s", address, port))
-		if err := server.ListenAndServe(); err != nil {
+		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.GetLogger().Error("HTTP server failed", "error", err)
 			os.Exit(1)
 		}

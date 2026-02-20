@@ -3,6 +3,8 @@ ARG TARGETOS
 ARG TARGETARCH
 ARG VERSION=main
 
+RUN apk --no-cache add ca-certificates tzdata && update-ca-certificates
+RUN echo "nobody:x:3000:3000:Nobody:/:" > /tmp/passwd
 WORKDIR /app
 
 COPY go.mod go.sum ./
@@ -13,8 +15,12 @@ COPY . .
 ENV CGO_ENABLED=0
 RUN GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags "-X main.Version=${VERSION}" -o exporter ./cmd/main.go
 
-FROM --platform=$TARGETOS/$TARGETARCH ghcr.io/arca-consult/scratch:0.0.2@sha256:ea3be3c3643833df48d7883c3f0caa9b891087d3b88ff553e2f3a928d7c267bd
-WORKDIR /
+FROM --platform=$TARGETOS/$TARGETARCH scratch
+WORKDIR /tmp
+COPY --from=builder /tmp/passwd /etc/passwd
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
+
 COPY --from=builder /app/exporter /exporter
 
 # needed as only root can access docker socket
