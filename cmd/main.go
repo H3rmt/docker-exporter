@@ -35,6 +35,10 @@ var (
 	address           string
 	port              string
 	dockerHost        string
+	collectorSystem   bool
+	collectorContainer bool
+	collectorNetwork  bool
+	collectorVolumes  bool
 )
 
 var rootCmd = &cobra.Command{
@@ -64,6 +68,10 @@ func init() {
 	rootCmd.Flags().StringVarP(&address, "address", "a", "0.0.0.0", "Address to listen on.")
 	rootCmd.Flags().StringVarP(&port, "port", "p", "9100", "Port to listen on.")
 	rootCmd.Flags().StringVarP(&dockerHost, "docker-host", "d", "unix:///var/run/docker.sock", "Host to connect to.")
+	rootCmd.Flags().BoolVar(&collectorSystem, "collector.system", true, "Enable system collector (exporter info, host OS info).")
+	rootCmd.Flags().BoolVar(&collectorContainer, "collector.container", true, "Enable container collector (container metrics).")
+	rootCmd.Flags().BoolVar(&collectorNetwork, "collector.network", true, "Enable network collector (network metrics).")
+	rootCmd.Flags().BoolVar(&collectorVolumes, "collector.volumes", true, "Enable volumes collector (volume size metrics).")
 }
 
 var (
@@ -101,14 +109,20 @@ func run(*cobra.Command, []string) {
 	}
 
 	log.GetLogger().Info("Initializing Docker Prometheus exporter...")
+	collectorConfig := exporter.CollectorConfig{
+		System:    collectorSystem,
+		Container: collectorContainer,
+		Network:   collectorNetwork,
+		Volumes:   collectorVolumes,
+	}
 	var reg prometheus.Gatherer
 	if internalMetrics {
 		reg = prometheus.DefaultGatherer
-		exporter.RegisterCollectorsWithRegistry(dockerClient, nil, Version)
+		exporter.RegisterCollectorsWithRegistry(dockerClient, nil, Version, collectorConfig)
 	} else {
 		// Create a custom registry that doesn't include the Go collector, process collector, etc.
 		registry := prometheus.NewRegistry()
-		exporter.RegisterCollectorsWithRegistry(dockerClient, registry, Version)
+		exporter.RegisterCollectorsWithRegistry(dockerClient, registry, Version, collectorConfig)
 		reg = registry
 	}
 
