@@ -11,6 +11,7 @@ import (
 	"github.com/h3rmt/docker-exporter/internal/docker"
 	"github.com/h3rmt/docker-exporter/internal/log"
 	"github.com/h3rmt/docker-exporter/internal/osinfo"
+	"github.com/h3rmt/docker-exporter/internal/status"
 	"github.com/moby/moby/api/types/container"
 )
 
@@ -80,6 +81,13 @@ func HandleAPIContainers(cli *docker.Client) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		log.GetLogger().Log(ctx, log.LevelTrace, "handle api containers")
+		
+		// Return empty list if not ready yet
+		if !status.IsReady() {
+			writeJSON(w, []containerItem{})
+			return
+		}
+		
 		var items []containerItem
 		containers, err := cli.ListAllRunningContainers(ctx)
 		if err != nil {

@@ -1,11 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -97,7 +99,7 @@ func run(*cobra.Command, []string) {
 		os.Exit(1)
 	}
 
-	log.GetLogger().Info("Collecting initial metrics...")
+	log.GetLogger().Info("Initializing Docker Prometheus exporter...")
 	var reg prometheus.Gatherer
 	if internalMetrics {
 		reg = prometheus.DefaultGatherer
@@ -110,7 +112,17 @@ func run(*cobra.Command, []string) {
 		reg = registry
 	}
 
-	http.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
+	// Wrapper for /metrics that returns 503 when not ready
+	metricsHandler := promhttp.HandlerFor(reg, promhttp.HandlerOpts{})
+	http.Handle("/metrics", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !status.IsReady() {
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = w.Write([]byte("503 Service Unavailable - Collecting initial metrics, please wait...\n"))
+			return
+		}
+		metricsHandler.ServeHTTP(w, r)
+	}))
 	http.Handle("/status", status.HandleStatus(dockerClient, Version))
 	// Web UI and API
 	if homepage {
@@ -138,6 +150,41 @@ func run(*cobra.Command, []string) {
 			log.GetLogger().Error("HTTP server failed", "error", err)
 			os.Exit(1)
 		}
+	}()
+
+	// Collect initial metrics in background
+	go func() {
+		log.GetLogger().Info("Collecting initial metrics in background...")
+		ctx := context.Background()
+		
+		// Perform an initial collection to warm up caches
+		containers, err := dockerClient.ListAllRunningContainers(ctx)
+		if err != nil {
+			log.GetLogger().Warn("Initial container listing failed", "error", err)
+		} else if len(containers) > 0 {
+			// Warm up by inspecting and getting stats for all containers concurrently
+			log.GetLogger().Debug("Warming up container stats cache", "count", len(containers))
+			
+			var wg sync.WaitGroup
+			// Use a semaphore to limit concurrent requests
+			sem := make(chan struct{}, 10)
+			
+			for _, container := range containers {
+				wg.Add(1)
+				go func(c docker.ContainerInfo) {
+					defer wg.Done()
+					sem <- struct{}{}        // acquire
+					defer func() { <-sem }() // release
+					
+					_, _ = dockerClient.InspectContainer(ctx, c.ID, true)
+					_, _ = dockerClient.GetContainerStats(ctx, c.ID)
+				}(container)
+			}
+			wg.Wait()
+		}
+		
+		log.GetLogger().Info("Initial metrics collection complete")
+		status.SetReady()
 	}()
 
 	// Graceful shutdown
