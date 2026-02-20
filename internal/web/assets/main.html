@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Docker Exporter</title>
+    <script src="chart.umd.min.js"></script>
+    <script src="main.js" defer></script>
+    <link rel="stylesheet" href="main.css"/>
+</head>
+<body>
+<main>
+    <div class="header">
+        <h1 id="host">Docker Exporter</h1>
+        <h2 id="ip"></h2>
+        <div class="header-right">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <span id="status_badge" class="status-badge status-starting">Starting...</span>
+                <a href="https://github.com/h3rmt/docker-exporter" target="_blank" id="link"
+                   style="font-weight: 600; text-decoration: none; color: light-dark(#2563eb, #60a5fa);">Docker
+                    Exporter</a>
+                <span id="version" style="font-size: 13px; color: light-dark(#666, #aaa);">???</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px; margin-top: 2px; ">
+                <a href="/metrics" target="_blank" class="button">metrics</a>
+                <a href="/status" target="_blank" class="button">status</a>
+                <div id="os_info" style="font-size: 13px; color: light-dark(#666, #aaa); text-align: right;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div style="display:flex; gap: 16px; justify-content: center;">
+        <div class="card-container">
+            <div class="card">
+                <h3>CPU Utilization (<span id="totalCPU"></span>)</h3>
+                <div class="chart-container">
+                    <canvas id="cpuChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="card-container">
+            <div class="card">
+                <h3>Memory Utilization (<span id="totalMem"></span>)</h3>
+                <div class="chart-container">
+                    <canvas id="memChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+            <h3 style="margin:0;">Containers<span id="container_count"></span></h3>
+            <div style="display:flex; gap:4px;" id="container_loading_div"></div>
+            <button id="updateBtn"
+                    style="background:#2563eb; color:white; border:none; padding:6px 12px; border-radius:6px; font-size:14px; cursor:pointer; font-family:inherit;">
+                Update
+            </button>
+        </div>
+        <div style="overflow-y:scroll;flex:1;">
+            <table>
+                <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>ID</th>
+                    <th>CPU</th>
+                    <th>Created</th>
+                    <th>Mem Usage</th>
+                    <th>Status</th>
+                </tr>
+                </thead>
+                <tbody id="containers"></tbody>
+            </table>
+        </div>
+    </div>
+</main>
+<div style="display:none;" title="Initial Data">
+    <div id="Labels">{{.Labels | toJson }}</div>
+    <div id="CPUData">{{.CPUData | toJson }}</div>
+    <div id="CPUDataUser">{{.CPUDataUser | toJson }}</div>
+    <div id="CPUDataSystem">{{.CPUDataSystem | toJson }}</div>
+    <div id="MemData">{{.MemData | toJson }}</div>
+    <div id="TotalMemData">{{.TotalMem | toJson }}</div>
+    <div id="CpuCountData">{{.CpuCount | toJson }}</div>
+</div>
+</body>
+</html>

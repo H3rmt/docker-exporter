@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/h3rmt/docker-exporter/internal/glob"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/spf13/cobra"
 
@@ -108,39 +109,10 @@ func run(*cobra.Command, []string) {
 		// Create a custom registry that doesn't include the Go collector, process collector, etc.
 		registry := prometheus.NewRegistry()
 		exporter.RegisterCollectorsWithRegistry(dockerClient, registry, Version)
-		// Create a custom registry that doesn't include the Go collector, process collector, etc.
 		reg = registry
 	}
 
-	// Wrapper for /metrics that returns 503 when not ready
-	metricsHandler := promhttp.HandlerFor(reg, promhttp.HandlerOpts{})
-	http.Handle("/metrics", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !status.IsReady() {
-			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-			w.WriteHeader(http.StatusServiceUnavailable)
-			_, _ = w.Write([]byte("503 Service Unavailable - Collecting initial metrics, please wait...\n"))
-			return
-		}
-		metricsHandler.ServeHTTP(w, r)
-	}))
-	http.Handle("/status", status.HandleStatus(dockerClient, Version))
-	// Web UI and API
-	if homepage {
-		http.HandleFunc("/", web.HandleRoot())
-		http.HandleFunc("/api/info", web.HandleAPIInfo(Version))
-		http.HandleFunc("/api/usage", web.HandleAPIUsage())
-		http.Handle("/api/containers", web.HandleAPIContainers(dockerClient))
-
-		go func() {
-			web.CollectInBg()
-			log.GetLogger().Debug("Metrics in background collector stopped")
-		}()
-	} else {
-		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusNotFound)
-			_, _ = w.Write([]byte("404 page not found (homepage disabled)\n"))
-		})
-	}
+	registerHttp(dockerClient, reg)
 
 	server := &http.Server{Addr: fmt.Sprintf("%s:%s", address, port), ErrorLog: slog.NewLogLogger(log.GetLogger().Handler(), slog.LevelWarn)}
 	log.GetLogger().Info("HTTP server created")
@@ -156,7 +128,8 @@ func run(*cobra.Command, []string) {
 	go func() {
 		log.GetLogger().Info("Collecting initial metrics in background...")
 		ctx := context.Background()
-		
+		start := time.Now()
+
 		// Perform an initial collection to warm up caches
 		containers, err := dockerClient.ListAllRunningContainers(ctx)
 		if err != nil {
@@ -164,27 +137,31 @@ func run(*cobra.Command, []string) {
 		} else if len(containers) > 0 {
 			// Warm up by inspecting and getting stats for all containers concurrently
 			log.GetLogger().Debug("Warming up container stats cache", "count", len(containers))
-			
+
 			var wg sync.WaitGroup
 			// Use a semaphore to limit concurrent requests
-			sem := make(chan struct{}, 10)
-			
+			sem := make(chan struct{}, 5)
+
 			for _, container := range containers {
 				wg.Add(1)
 				go func(c docker.ContainerInfo) {
 					defer wg.Done()
 					sem <- struct{}{}        // acquire
 					defer func() { <-sem }() // release
-					
+
 					_, _ = dockerClient.InspectContainer(ctx, c.ID, true)
 					_, _ = dockerClient.GetContainerStats(ctx, c.ID)
 				}(container)
 			}
 			wg.Wait()
 		}
-		
-		log.GetLogger().Info("Initial metrics collection complete")
-		status.SetReady()
+
+		// test slow startup
+		//time.Sleep(10 * time.Second)
+
+		duration := time.Since(start)
+		log.GetLogger().Info(fmt.Sprintf("Initial metrics collection complete in %s", duration), "duration_ns", int(duration))
+		glob.SetReady()
 	}()
 
 	// Graceful shutdown
@@ -198,5 +175,45 @@ func run(*cobra.Command, []string) {
 	if err != nil {
 		log.GetLogger().Error("Failed to close HTTP server", "error", err)
 		os.Exit(1)
+	}
+}
+
+func registerHttp(dockerClient *docker.Client, reg prometheus.Gatherer) {
+	http.Handle("/status", status.HandleStatus(dockerClient, Version))
+
+	// Wrapper for /metrics that returns 503 when not ready
+	metricsHandler := promhttp.HandlerFor(reg, promhttp.HandlerOpts{
+		EnableOpenMetrics: trace,
+	})
+	http.Handle("/metrics", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !glob.IsReady() {
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = w.Write([]byte("503 Service Unavailable (Collecting initial metrics, please wait...)\n"))
+			return
+		}
+		metricsHandler.ServeHTTP(w, r)
+	}))
+
+	// Web UI and API
+	if homepage {
+		http.HandleFunc("/", web.HandleRoot())
+		http.HandleFunc("/main.css", web.HandleCss())
+		http.HandleFunc("/main.js", web.HandleJs())
+		http.HandleFunc("/chart.umd.min.js", web.HandleChartJs())
+
+		http.HandleFunc("/api/info", web.HandleAPIInfo(Version))
+		http.HandleFunc("/api/usage", web.HandleAPIUsage())
+		http.Handle("/api/containers", web.HandleAPIContainers(dockerClient))
+
+		go func() {
+			web.CollectInBg()
+			log.GetLogger().Debug("Metrics in background collector stopped")
+		}()
+	} else {
+		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusNotFound)
+			_, _ = w.Write([]byte("404 page not found (homepage disabled)\n"))
+		})
 	}
 }

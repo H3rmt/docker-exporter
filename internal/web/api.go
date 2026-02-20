@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/h3rmt/docker-exporter/internal/docker"
+	"github.com/h3rmt/docker-exporter/internal/glob"
 	"github.com/h3rmt/docker-exporter/internal/log"
 	"github.com/h3rmt/docker-exporter/internal/osinfo"
-	"github.com/h3rmt/docker-exporter/internal/status"
 	"github.com/moby/moby/api/types/container"
 )
 
@@ -25,10 +25,18 @@ type infoResponse struct {
 
 func HandleAPIInfo(version string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		hn, _ := os.ReadFile("/etc/hostname")
-		hostname := strings.TrimSpace(string(hn))
+		hn, err := os.ReadFile("/etc/hostname")
+		var hostname string
+		if err != nil {
+			log.GetLogger().ErrorContext(r.Context(), "failed to read hostname", "error", err)
+			glob.SetError("readHostname", &err)
+			hostname = strings.TrimSpace(string(hn))
+		} else {
+			glob.SetError("readHostname", nil)
+			hostname = strings.TrimSpace(string(hn))
+		}
 		hostIP := os.Getenv("IP")
-		osInfo := osinfo.GetCached()
+		osInfo := osinfo.GetOSInfo(r.Context())
 		writeJSON(w, infoResponse{
 			Hostname:  hostname,
 			Version:   version,
@@ -49,7 +57,7 @@ type UsageResponse struct {
 func HandleAPIUsage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		usage, usageUser, usageSystem, err := readCPUInfo(ctx, 500*time.Millisecond)
+		usage, usageUser, usageSystem, err := readCPUInfo(ctx, 1*time.Second)
 		if err != nil {
 			log.GetLogger().ErrorContext(ctx, "failed to read cpu", "error", err)
 		}
@@ -81,13 +89,13 @@ func HandleAPIContainers(cli *docker.Client) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		log.GetLogger().Log(ctx, log.LevelTrace, "handle api containers")
-		
+
 		// Return empty list if not ready yet
-		if !status.IsReady() {
+		if !glob.IsReady() {
 			writeJSON(w, []containerItem{})
 			return
 		}
-		
+
 		var items []containerItem
 		containers, err := cli.ListAllRunningContainers(ctx)
 		if err != nil {

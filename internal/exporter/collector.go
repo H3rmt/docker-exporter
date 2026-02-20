@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/h3rmt/docker-exporter/internal/docker"
+	"github.com/h3rmt/docker-exporter/internal/glob"
 	"github.com/h3rmt/docker-exporter/internal/log"
 	"github.com/h3rmt/docker-exporter/internal/osinfo"
 
@@ -204,7 +205,19 @@ func NewDockerCollector(client *docker.Client, version string) *DockerCollector 
 }
 
 func (c *DockerCollector) Describe(ch chan<- *prometheus.Desc) {
-	prometheus.DescribeByCollect(c, ch)
+	for _, desc := range []*prometheus.Desc{
+		exporterInfoDesc, hostOSInfoDesc,
+		containerInfoDesc, containerNameDesc, containerStateDesc, containerCreatedDesc,
+		containerPortsDesc, containerStartedDesc, containerFinishedAtDesc, containerSizeRootFsDesc,
+		containerSizeRwDesc, containerRestartCountDesc, containerExitCodeDesc, containerPidsDesc,
+		containerCpuUserNSDesc, containerCpuKernelNSDesc, containerCpuNSDesc, containerCpuPercent, containerCpuPercentHost,
+		containerMemLimitKiBDesc, containerMemUsageKiBDesc,
+		containerNetSendBytesDesc, containerNetSendDroppedDesc, containerNetSendErrorsDesc,
+		containerNetRecvBytesDesc, containerNetRecvDroppedDesc, containerNetRecvErrorsDesc,
+		containerBlockInputBytesDesc, containerBlockOutputBytesDesc,
+	} {
+		ch <- desc
+	}
 }
 
 type containerResult struct {
@@ -214,7 +227,9 @@ type containerResult struct {
 }
 
 func (c *DockerCollector) Collect(ch chan<- prometheus.Metric) {
-	hostname := getHostname()
+	ctx := context.Background()
+
+	hostname := getHostname(ctx)
 	// Export version information
 	ch <- prometheus.MustNewConstMetric(
 		exporterInfoDesc,
@@ -224,7 +239,7 @@ func (c *DockerCollector) Collect(ch chan<- prometheus.Metric) {
 		c.version,
 	)
 	// Export OS information
-	osInfo := osinfo.GetCached()
+	osInfo := osinfo.GetOSInfo(ctx)
 	ch <- prometheus.MustNewConstMetric(
 		hostOSInfoDesc,
 		prometheus.GaugeValue,
@@ -233,11 +248,10 @@ func (c *DockerCollector) Collect(ch chan<- prometheus.Metric) {
 		osInfo.Name,
 		osInfo.VersionID,
 	)
-	ctx := context.Background()
 
 	containerInfo, err := c.dockerClient.ListAllRunningContainers(ctx)
 	if err != nil {
-		log.GetLogger().WarnContext(ctx, "Failed to list running containers", "error", err)
+		log.GetLogger().ErrorContext(ctx, "Failed to list running containers", "error", err)
 		return
 	}
 
@@ -312,7 +326,13 @@ func RegisterCollectorsWithRegistry(cli *docker.Client, reg *prometheus.Registry
 	}
 }
 
-func getHostname() string {
-	hn, _ := os.ReadFile("/etc/hostname")
+func getHostname(ctx context.Context) string {
+	hn, err := os.ReadFile("/etc/hostname")
+	if err != nil {
+		log.GetLogger().ErrorContext(ctx, "failed to read hostname", "error", err)
+		glob.SetError("readHostname", &err)
+		return ""
+	}
+	glob.SetError("readHostname", nil)
 	return strings.TrimSpace(string(hn))
 }

@@ -1,4 +1,47 @@
 {
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS-DEV",
+      "label": "prometheus-dev",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
+  "__elements": {},
+  "__requires": [
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "12.1.1"
+    },
+    {
+      "type": "panel",
+      "id": "piechart",
+      "name": "Pie chart",
+      "version": ""
+    },
+    {
+      "type": "datasource",
+      "id": "prometheus",
+      "name": "Prometheus",
+      "version": "1.0.0"
+    },
+    {
+      "type": "panel",
+      "id": "stat",
+      "name": "Stat",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "timeseries",
+      "name": "Time series",
+      "version": ""
+    }
+  ],
   "annotations": {
     "list": [
       {
@@ -25,7 +68,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 15,
+  "id": null,
   "links": [],
   "panels": [
     {
@@ -146,7 +189,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${source}"
+            "uid": "${DS_PROMETHEUS-DEV}"
           },
           "editorMode": "code",
           "expr": "max by(hostname) (docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left(name) docker_container_state)",
@@ -156,7 +199,7 @@
           "refId": "B"
         }
       ],
-      "title": "Services uptime",
+      "title": "Services",
       "type": "stat"
     },
     {
@@ -216,7 +259,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${source}"
+            "uid": "${DS_PROMETHEUS-DEV}"
           },
           "disableTextWrap": false,
           "editorMode": "code",
@@ -231,7 +274,6 @@
           "useBackend": false
         }
       ],
-      "title": "",
       "transparent": true,
       "type": "piechart"
     },
@@ -289,7 +331,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${source}"
+            "uid": "${DS_PROMETHEUS-DEV}"
           },
           "editorMode": "code",
           "expr": "count by(hostname) (docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left(name) docker_container_state == 3) or count by(hostname) (docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left(name) docker_container_state) * 0 ",
@@ -356,7 +398,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${source}"
+            "uid": "${DS_PROMETHEUS-DEV}"
           },
           "editorMode": "code",
           "expr": "count by(hostname) (docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left(name) docker_container_state == 6) or count by(hostname) (docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left(name) docker_container_state) * 0 ",
@@ -427,7 +469,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${source}"
+            "uid": "${DS_PROMETHEUS-DEV}"
           },
           "editorMode": "code",
           "expr": "count by(hostname) (docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left(name) docker_container_state == 5) or count by(hostname) (docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left(name) docker_container_state) * 0 ",
@@ -523,10 +565,10 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${source}"
+            "uid": "${DS_PROMETHEUS-DEV}"
           },
           "editorMode": "code",
-          "expr": "sum by(hostname) (docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left() rate(docker_container_cpu_user_microseconds_total[$__rate_interval]) / $multi)",
+          "expr": "sum by (hostname) (\n  docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"}\n  * on (container_id) group_left ()\n    rate(docker_container_cpu_nanoseconds_total[$__rate_interval])\n  / 1000 / 1000\n)",
           "instant": false,
           "legendFormat": "{{hostname}}",
           "range": true,
@@ -623,7 +665,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${source}"
+            "uid": "${DS_PROMETHEUS-DEV}"
           },
           "editorMode": "code",
           "expr": "sum by (hostname) (docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left()\ndocker_container_mem_usage_kib)",
@@ -644,7 +686,7 @@
         "x": 0,
         "y": 24
       },
-      "id": 20,
+      "id": 30,
       "panels": [],
       "title": "Per Container",
       "type": "row"
@@ -703,7 +745,8 @@
                 "value": 0
               }
             ]
-          }
+          },
+          "unit": "percent"
         },
         "overrides": []
       },
@@ -732,10 +775,10 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${source}"
+            "uid": "${DS_PROMETHEUS-DEV}"
           },
           "editorMode": "code",
-          "expr": "docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left() rate(docker_container_cpu_user_microseconds_total[$__rate_interval]) / $multi",
+          "expr": "docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left() docker_container_cpu_percent",
           "hide": false,
           "instant": false,
           "legendFormat": "{{name}}({{hostname}})",
@@ -830,16 +873,430 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${source}"
+            "uid": "${DS_PROMETHEUS-DEV}"
+          },
+          "disableTextWrap": false,
+          "editorMode": "code",
+          "expr": "docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left() (docker_container_mem_usage_kib)",
+          "fullMetaSearch": false,
+          "includeNullMetadata": true,
+          "legendFormat": "{{name}}({{hostname}})",
+          "range": true,
+          "refId": "A",
+          "useBackend": false
+        }
+      ],
+      "title": "Memory usage",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${source}"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 11,
+        "w": 12,
+        "x": 0,
+        "y": 36
+      },
+      "id": 33,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "12.1.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS-DEV}"
           },
           "editorMode": "code",
-          "expr": "docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left() docker_container_mem_usage_kib",
+          "expr": "docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left() rate(docker_container_cpu_nanoseconds_total[$__rate_interval]) / 1000 / 1000",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "{{name}}({{hostname}})",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "CPU",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${source}"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "series",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "axisSoftMax": 0.3,
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineStyle": {
+              "fill": "solid"
+            },
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "#EAB839",
+                "value": 75
+              },
+              {
+                "color": "semi-dark-red",
+                "value": 85
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 11,
+        "w": 12,
+        "x": 12,
+        "y": 36
+      },
+      "id": 32,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "12.1.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS-DEV}"
+          },
+          "editorMode": "code",
+          "expr": "docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left() (docker_container_mem_usage_kib / docker_container_mem_limit_kib)",
           "legendFormat": "{{name}}({{hostname}})",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Memory usage",
+      "title": "Memory usage %",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 47
+      },
+      "id": 20,
+      "panels": [],
+      "title": "Per Container Net",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${source}"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          },
+          "unit": "bps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 11,
+        "w": 12,
+        "x": 0,
+        "y": 48
+      },
+      "id": 12,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": true,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "12.1.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS-DEV}"
+          },
+          "editorMode": "code",
+          "expr": "docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left() rate(docker_container_net_send_bytes_total[$__rate_interval]) * 8",
+          "legendFormat": "R {{name}}({{hostname}})",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Network Output",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${source}"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          },
+          "unit": "bps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 11,
+        "w": 12,
+        "x": 12,
+        "y": 48
+      },
+      "id": 13,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": true,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "12.1.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS-DEV}"
+          },
+          "editorMode": "code",
+          "expr": "docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left() rate(docker_container_net_receive_bytes_total[$__rate_interval]) * 8",
+          "legendFormat": "R {{name}}({{hostname}})",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Network input",
       "type": "timeseries"
     },
     {
@@ -899,32 +1356,15 @@
           },
           "unit": "decbytes"
         },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byFrameRefID",
-              "options": "A"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "bps"
-              },
-              {
-                "id": "custom.lineWidth",
-                "value": 2
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "gridPos": {
         "h": 11,
         "w": 12,
         "x": 0,
-        "y": 36
+        "y": 59
       },
-      "id": 12,
+      "id": 28,
       "options": {
         "legend": {
           "calcs": [],
@@ -943,18 +1383,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${source}"
-          },
-          "editorMode": "code",
-          "expr": "docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left() rate(docker_container_net_send_bytes_total[$__rate_interval]) * 8",
-          "legendFormat": "R {{name}}({{hostname}})",
-          "range": true,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${source}"
+            "uid": "${DS_PROMETHEUS-DEV}"
           },
           "editorMode": "code",
           "expr": "docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left() docker_container_net_send_bytes_total",
@@ -1024,32 +1453,15 @@
           },
           "unit": "decbytes"
         },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byFrameRefID",
-              "options": "A"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "bps"
-              },
-              {
-                "id": "custom.lineWidth",
-                "value": 2
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "gridPos": {
         "h": 11,
         "w": 12,
         "x": 12,
-        "y": 36
+        "y": 59
       },
-      "id": 13,
+      "id": 29,
       "options": {
         "legend": {
           "calcs": [],
@@ -1068,18 +1480,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${source}"
-          },
-          "editorMode": "code",
-          "expr": "docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left() rate(docker_container_net_receive_bytes_total[$__rate_interval]) * 8",
-          "legendFormat": "R {{name}}({{hostname}})",
-          "range": true,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${source}"
+            "uid": "${DS_PROMETHEUS-DEV}"
           },
           "editorMode": "code",
           "expr": "docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left() docker_container_net_receive_bytes_total",
@@ -1090,6 +1491,212 @@
         }
       ],
       "title": "Network input",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 70
+      },
+      "id": 31,
+      "panels": [],
+      "title": "Per Container Disk",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${source}"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          },
+          "unit": "Bps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 11,
+        "w": 12,
+        "x": 0,
+        "y": 71
+      },
+      "id": 22,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": true,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "12.1.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS-DEV}"
+          },
+          "editorMode": "code",
+          "expr": "docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left() rate(docker_container_block_input_total[$__rate_interval])",
+          "hide": false,
+          "legendFormat": "R {{name}}({{hostname}})",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Read From Disk",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${source}"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          },
+          "unit": "Bps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 11,
+        "w": 12,
+        "x": 12,
+        "y": 71
+      },
+      "id": 23,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "12.1.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS-DEV}"
+          },
+          "editorMode": "code",
+          "expr": "docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left() rate(docker_container_block_output_total[$__rate_interval])",
+          "legendFormat": "R {{name}}({{hostname}})",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Write To Disk",
       "type": "timeseries"
     },
     {
@@ -1149,32 +1756,15 @@
           },
           "unit": "decbytes"
         },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byFrameRefID",
-              "options": "A"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "Bps"
-              },
-              {
-                "id": "custom.lineWidth",
-                "value": 2
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "gridPos": {
         "h": 11,
         "w": 12,
         "x": 0,
-        "y": 47
+        "y": 82
       },
-      "id": 22,
+      "id": 27,
       "options": {
         "legend": {
           "calcs": [],
@@ -1193,19 +1783,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${source}"
-          },
-          "editorMode": "code",
-          "expr": "docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left() rate(docker_container_block_input_total[$__rate_interval])",
-          "hide": false,
-          "legendFormat": "R {{name}}({{hostname}})",
-          "range": true,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${source}"
+            "uid": "${DS_PROMETHEUS-DEV}"
           },
           "editorMode": "code",
           "expr": "docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left() docker_container_block_input_total",
@@ -1276,32 +1854,15 @@
           },
           "unit": "decbytes"
         },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byFrameRefID",
-              "options": "A"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "Bps"
-              },
-              {
-                "id": "custom.lineWidth",
-                "value": 2
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "gridPos": {
         "h": 11,
         "w": 12,
         "x": 12,
-        "y": 47
+        "y": 82
       },
-      "id": 23,
+      "id": 26,
       "options": {
         "legend": {
           "calcs": [],
@@ -1320,18 +1881,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${source}"
-          },
-          "editorMode": "code",
-          "expr": "docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left() rate(docker_container_block_output_total[$__rate_interval])",
-          "legendFormat": "R {{name}}({{hostname}})",
-          "range": true,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${source}"
+            "uid": "${DS_PROMETHEUS-DEV}"
           },
           "editorMode": "code",
           "expr": "docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left() docker_container_block_output_total",
@@ -1424,7 +1974,7 @@
         "h": 11,
         "w": 12,
         "x": 0,
-        "y": 58
+        "y": 93
       },
       "id": 24,
       "options": {
@@ -1445,7 +1995,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${source}"
+            "uid": "${DS_PROMETHEUS-DEV}"
           },
           "editorMode": "code",
           "expr": "docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left() docker_container_rw_size_bytes",
@@ -1539,7 +2089,7 @@
         "h": 11,
         "w": 12,
         "x": 12,
-        "y": 58
+        "y": 93
       },
       "id": 25,
       "options": {
@@ -1560,7 +2110,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${source}"
+            "uid": "${DS_PROMETHEUS-DEV}"
           },
           "editorMode": "code",
           "expr": "docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left() docker_container_rootfs_size_bytes",
@@ -1575,30 +2125,14 @@
       "type": "timeseries"
     }
   ],
-  "preload": false,
   "refresh": "1m",
   "schemaVersion": 41,
   "tags": [],
   "templating": {
     "list": [
       {
-        "current": {
-          "text": "10000",
-          "value": "10000"
-        },
-        "description": "CPU multiplier",
-        "hide": 2,
-        "name": "multi",
-        "query": "10000",
-        "skipUrlSync": true,
-        "type": "constant"
-      },
-      {
         "allowCustomValue": false,
-        "current": {
-          "text": "prometheus-prod",
-          "value": "df7dhzuw3deyof"
-        },
+        "current": {},
         "includeAll": false,
         "label": "Source",
         "name": "source",
@@ -1611,14 +2145,7 @@
       {
         "allValue": ".*",
         "allowCustomValue": false,
-        "current": {
-          "text": [
-            "All"
-          ],
-          "value": [
-            "$__all"
-          ]
-        },
+        "current": {},
         "datasource": {
           "type": "prometheus",
           "uid": "${source}"
@@ -1641,15 +2168,10 @@
       {
         "allValue": ".*",
         "allowCustomValue": false,
-        "current": {
-          "text": "All",
-          "value": [
-            "$__all"
-          ]
-        },
+        "current": {},
         "datasource": {
           "type": "prometheus",
-          "uid": "${source}"
+          "uid": "${DS_PROMETHEUS-DEV}"
         },
         "definition": "label_values(docker_container_info{hostname=~\"$hostname\"},name)",
         "includeAll": true,
@@ -1677,5 +2199,6 @@
   "timezone": "",
   "title": "Docker",
   "uid": "cUITC74Vk",
-  "version": 94
+  "version": 114,
+  "weekStart": ""
 }

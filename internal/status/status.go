@@ -3,29 +3,18 @@ package status
 import (
 	"encoding/json"
 	"net/http"
-	"sync/atomic"
 
 	"github.com/h3rmt/docker-exporter/internal/docker"
+	"github.com/h3rmt/docker-exporter/internal/glob"
 	"github.com/h3rmt/docker-exporter/internal/log"
 )
 
-var ready atomic.Bool
-
 type Response struct {
-	Status        string `json:"status"`
-	DockerError   string `json:"docker_error,omitempty"`
-	DockerVersion string `json:"docker_version,omitempty"`
-	Version       string `json:"version"`
-}
-
-// SetReady marks the exporter as ready to serve metrics
-func SetReady() {
-	ready.Store(true)
-}
-
-// IsReady returns true if the exporter is ready to serve metrics
-func IsReady() bool {
-	return ready.Load()
+	Status        string            `json:"status"`
+	Errors        map[string]string `json:"errors,omitempty"`
+	DockerError   string            `json:"dockerError,omitempty"`
+	DockerVersion string            `json:"dockerVersion,omitempty"`
+	Version       string            `json:"version"`
 }
 
 func HandleStatus(cli *docker.Client, version string) http.Handler {
@@ -35,17 +24,10 @@ func HandleStatus(cli *docker.Client, version string) http.Handler {
 
 		response := Response{
 			Status:        "healthy",
+			Errors:        glob.GetErrorDescriptions(),
 			DockerError:   "",
 			DockerVersion: "",
 			Version:       version,
-		}
-
-		// Check if ready
-		if !IsReady() {
-			response.Status = "starting"
-			w.WriteHeader(http.StatusServiceUnavailable)
-			_ = json.NewEncoder(w).Encode(response)
-			return
 		}
 
 		// Check if Docker daemon is responding
@@ -55,10 +37,31 @@ func HandleStatus(cli *docker.Client, version string) http.Handler {
 			log.GetLogger().ErrorContext(ctx, "Docker daemon is not responding", "error", err)
 			response.Status = "unhealthy"
 			response.DockerError = err.Error()
-			w.WriteHeader(http.StatusServiceUnavailable)
 		} else {
 			response.DockerVersion = ver
+		}
+
+		// Check if healthy
+		if !glob.IsOk() {
+			response.Status = "unhealthy"
+		}
+
+		// Check if ready
+		if !glob.IsReady() {
+			response.Status = "starting"
+		}
+
+		switch response.Status {
+		case "healthy":
 			w.WriteHeader(http.StatusOK)
+			break
+		case "starting":
+			w.WriteHeader(http.StatusServiceUnavailable)
+			break
+		case "unhealthy":
+			w.WriteHeader(http.StatusInternalServerError)
+			break
+
 		}
 
 		err = json.NewEncoder(w).Encode(response)
