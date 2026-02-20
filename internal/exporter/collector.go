@@ -14,10 +14,19 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+// CollectorConfig holds which collector groups are enabled
+type CollectorConfig struct {
+	System    bool
+	Container bool
+	Network   bool
+	Volumes   bool
+}
+
 // DockerCollector implements the prometheus.Collector interface
 type DockerCollector struct {
 	dockerClient *docker.Client
 	version      string
+	config       CollectorConfig
 }
 
 var (
@@ -197,26 +206,45 @@ var (
 	)
 )
 
-func NewDockerCollector(client *docker.Client, version string) *DockerCollector {
+func NewDockerCollector(client *docker.Client, version string, config CollectorConfig) *DockerCollector {
 	return &DockerCollector{
 		dockerClient: client,
 		version:      version,
+		config:       config,
 	}
 }
 
 func (c *DockerCollector) Describe(ch chan<- *prometheus.Desc) {
-	for _, desc := range []*prometheus.Desc{
-		exporterInfoDesc, hostOSInfoDesc,
-		containerInfoDesc, containerNameDesc, containerStateDesc, containerCreatedDesc,
-		containerPortsDesc, containerStartedDesc, containerFinishedAtDesc, containerSizeRootFsDesc,
-		containerSizeRwDesc, containerRestartCountDesc, containerExitCodeDesc, containerPidsDesc,
-		containerCpuUserNSDesc, containerCpuKernelNSDesc, containerCpuNSDesc, containerCpuPercent, containerCpuPercentHost,
-		containerMemLimitKiBDesc, containerMemUsageKiBDesc,
-		containerNetSendBytesDesc, containerNetSendDroppedDesc, containerNetSendErrorsDesc,
-		containerNetRecvBytesDesc, containerNetRecvDroppedDesc, containerNetRecvErrorsDesc,
-		containerBlockInputBytesDesc, containerBlockOutputBytesDesc,
-	} {
-		ch <- desc
+	if c.config.System {
+		ch <- exporterInfoDesc
+		ch <- hostOSInfoDesc
+	}
+
+	if c.config.Container {
+		for _, desc := range []*prometheus.Desc{
+			containerInfoDesc, containerNameDesc, containerStateDesc, containerCreatedDesc,
+			containerPortsDesc, containerStartedDesc, containerFinishedAtDesc,
+			containerRestartCountDesc, containerExitCodeDesc, containerPidsDesc,
+			containerCpuUserNSDesc, containerCpuKernelNSDesc, containerCpuNSDesc, containerCpuPercent, containerCpuPercentHost,
+			containerMemLimitKiBDesc, containerMemUsageKiBDesc,
+			containerBlockInputBytesDesc, containerBlockOutputBytesDesc,
+		} {
+			ch <- desc
+		}
+	}
+
+	if c.config.Network {
+		for _, desc := range []*prometheus.Desc{
+			containerNetSendBytesDesc, containerNetSendDroppedDesc, containerNetSendErrorsDesc,
+			containerNetRecvBytesDesc, containerNetRecvDroppedDesc, containerNetRecvErrorsDesc,
+		} {
+			ch <- desc
+		}
+	}
+
+	if c.config.Volumes {
+		ch <- containerSizeRootFsDesc
+		ch <- containerSizeRwDesc
 	}
 }
 
@@ -230,24 +258,31 @@ func (c *DockerCollector) Collect(ch chan<- prometheus.Metric) {
 	ctx := context.Background()
 
 	hostname := getHostname(ctx)
-	// Export version information
-	ch <- prometheus.MustNewConstMetric(
-		exporterInfoDesc,
-		prometheus.GaugeValue,
-		1,
-		hostname,
-		c.version,
-	)
-	// Export OS information
-	osInfo := osinfo.GetOSInfo(ctx)
-	ch <- prometheus.MustNewConstMetric(
-		hostOSInfoDesc,
-		prometheus.GaugeValue,
-		1,
-		hostname,
-		osInfo.Name,
-		osInfo.VersionID,
-	)
+
+	if c.config.System {
+		// Export version information
+		ch <- prometheus.MustNewConstMetric(
+			exporterInfoDesc,
+			prometheus.GaugeValue,
+			1,
+			hostname,
+			c.version,
+		)
+		// Export OS information
+		osInfo := osinfo.GetOSInfo(ctx)
+		ch <- prometheus.MustNewConstMetric(
+			hostOSInfoDesc,
+			prometheus.GaugeValue,
+			1,
+			hostname,
+			osInfo.Name,
+			osInfo.VersionID,
+		)
+	}
+
+	if !c.config.Container && !c.config.Network && !c.config.Volumes {
+		return
+	}
 
 	containerInfo, err := c.dockerClient.ListAllRunningContainers(ctx)
 	if err != nil {
@@ -255,11 +290,15 @@ func (c *DockerCollector) Collect(ch chan<- prometheus.Metric) {
 		return
 	}
 
-	formatContainerInfo(ch, hostname, containerInfo)
-	formatContainerNames(ch, hostname, containerInfo)
-	formatContainerState(ch, hostname, containerInfo)
-	formatContainerCreated(ch, hostname, containerInfo)
-	formatContainerPorts(ch, hostname, containerInfo)
+	if c.config.Container {
+		formatContainerInfo(ch, hostname, containerInfo)
+		formatContainerNames(ch, hostname, containerInfo)
+		formatContainerState(ch, hostname, containerInfo)
+		formatContainerCreated(ch, hostname, containerInfo)
+		formatContainerPorts(ch, hostname, containerInfo)
+	}
+
+	needInspect := c.config.Container || c.config.Volumes
 
 	resultCh := make(chan containerResult, len(containerInfo))
 	var wg sync.WaitGroup
@@ -270,19 +309,23 @@ func (c *DockerCollector) Collect(ch chan<- prometheus.Metric) {
 			defer wg.Done()
 			id := container.ID
 
-			inspect, err := c.dockerClient.InspectContainer(ctx, id, true)
-			if err != nil {
-				log.GetLogger().WarnContext(ctx, "Failed to inspect container", "error", err, "container_id", id)
-			} else {
-				stat, err := c.dockerClient.GetContainerStats(ctx, id)
+			var inspect docker.ContainerInspect
+			if needInspect {
+				var err error
+				inspect, err = c.dockerClient.InspectContainer(ctx, id, c.config.Volumes)
 				if err != nil {
-					log.GetLogger().WarnContext(ctx, "Failed to get container stats", "error", err, "container_id", id)
-				} else {
-					result := containerResult{id: id, stat: stat, inspect: inspect}
-					resultCh <- result
+					log.GetLogger().WarnContext(ctx, "Failed to inspect container", "error", err, "container_id", id)
+					return
 				}
 			}
 
+			stat, err := c.dockerClient.GetContainerStats(ctx, id)
+			if err != nil {
+				log.GetLogger().WarnContext(ctx, "Failed to get container stats", "error", err, "container_id", id)
+				return
+			}
+
+			resultCh <- containerResult{id: id, stat: stat, inspect: inspect}
 		}(container)
 	}
 
@@ -292,33 +335,41 @@ func (c *DockerCollector) Collect(ch chan<- prometheus.Metric) {
 	}()
 
 	for result := range resultCh {
-		formatContainerStarted(ch, hostname, result.id, result.inspect)
-		formatContainerExitCode(ch, hostname, result.id, result.inspect)
-		formatContainerRestartCount(ch, hostname, result.id, result.inspect)
-		formatContainerFinished(ch, hostname, result.id, result.inspect)
-		formatContainerSizeRootFs(ch, hostname, result.id, result.inspect)
-		formatContainerSizeRw(ch, hostname, result.id, result.inspect)
-		formatContainerPids(ch, hostname, result.id, result.stat)
-		formatContainerCpuMicroSeconds(ch, hostname, result.id, result.stat)
-		formatContainerCpuUserMicroSeconds(ch, hostname, result.id, result.stat)
-		formatContainerCpuKernelMicroSeconds(ch, hostname, result.id, result.stat)
-		formatContainerCpuPercentHost(ch, hostname, result.id, result.stat)
-		formatContainerCpuPercent(ch, hostname, result.id, result.stat, result.inspect)
-		formatContainerMemLimitKiB(ch, hostname, result.id, result.stat)
-		formatContainerMemUsageKiB(ch, hostname, result.id, result.stat)
-		formatContainerNetSendBytes(ch, hostname, result.id, result.stat)
-		formatContainerNetSendDropped(ch, hostname, result.id, result.stat)
-		formatContainerNetSendErrors(ch, hostname, result.id, result.stat)
-		formatContainerNetRecvBytes(ch, hostname, result.id, result.stat)
-		formatContainerNetRecvDropped(ch, hostname, result.id, result.stat)
-		formatContainerNetRecvErrors(ch, hostname, result.id, result.stat)
-		formatBlockOutputBytes(ch, hostname, result.id, result.stat)
-		formatBlockInputBytes(ch, hostname, result.id, result.stat)
+		if c.config.Container {
+			formatContainerStarted(ch, hostname, result.id, result.inspect)
+			formatContainerExitCode(ch, hostname, result.id, result.inspect)
+			formatContainerRestartCount(ch, hostname, result.id, result.inspect)
+			formatContainerFinished(ch, hostname, result.id, result.inspect)
+			formatContainerPids(ch, hostname, result.id, result.stat)
+			formatContainerCpuMicroSeconds(ch, hostname, result.id, result.stat)
+			formatContainerCpuUserMicroSeconds(ch, hostname, result.id, result.stat)
+			formatContainerCpuKernelMicroSeconds(ch, hostname, result.id, result.stat)
+			formatContainerCpuPercentHost(ch, hostname, result.id, result.stat)
+			formatContainerCpuPercent(ch, hostname, result.id, result.stat, result.inspect)
+			formatContainerMemLimitKiB(ch, hostname, result.id, result.stat)
+			formatContainerMemUsageKiB(ch, hostname, result.id, result.stat)
+			formatBlockOutputBytes(ch, hostname, result.id, result.stat)
+			formatBlockInputBytes(ch, hostname, result.id, result.stat)
+		}
+
+		if c.config.Network {
+			formatContainerNetSendBytes(ch, hostname, result.id, result.stat)
+			formatContainerNetSendDropped(ch, hostname, result.id, result.stat)
+			formatContainerNetSendErrors(ch, hostname, result.id, result.stat)
+			formatContainerNetRecvBytes(ch, hostname, result.id, result.stat)
+			formatContainerNetRecvDropped(ch, hostname, result.id, result.stat)
+			formatContainerNetRecvErrors(ch, hostname, result.id, result.stat)
+		}
+
+		if c.config.Volumes {
+			formatContainerSizeRootFs(ch, hostname, result.id, result.inspect)
+			formatContainerSizeRw(ch, hostname, result.id, result.inspect)
+		}
 	}
 }
 
-func RegisterCollectorsWithRegistry(cli *docker.Client, reg *prometheus.Registry, version string) {
-	collector := NewDockerCollector(cli, version)
+func RegisterCollectorsWithRegistry(cli *docker.Client, reg *prometheus.Registry, version string, config CollectorConfig) {
+	collector := NewDockerCollector(cli, version, config)
 	if reg == nil {
 		prometheus.MustRegister(collector)
 	} else {
