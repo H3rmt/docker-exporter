@@ -298,6 +298,8 @@ func (c *DockerCollector) Collect(ch chan<- prometheus.Metric) {
 		formatContainerPorts(ch, hostname, containerInfo)
 	}
 
+	needInspect := c.config.Container || c.config.Volumes
+
 	resultCh := make(chan containerResult, len(containerInfo))
 	var wg sync.WaitGroup
 
@@ -307,19 +309,23 @@ func (c *DockerCollector) Collect(ch chan<- prometheus.Metric) {
 			defer wg.Done()
 			id := container.ID
 
-			inspect, err := c.dockerClient.InspectContainer(ctx, id, c.config.Volumes)
-			if err != nil {
-				log.GetLogger().WarnContext(ctx, "Failed to inspect container", "error", err, "container_id", id)
-			} else {
-				stat, err := c.dockerClient.GetContainerStats(ctx, id)
+			var inspect docker.ContainerInspect
+			if needInspect {
+				var err error
+				inspect, err = c.dockerClient.InspectContainer(ctx, id, c.config.Volumes)
 				if err != nil {
-					log.GetLogger().WarnContext(ctx, "Failed to get container stats", "error", err, "container_id", id)
-				} else {
-					result := containerResult{id: id, stat: stat, inspect: inspect}
-					resultCh <- result
+					log.GetLogger().WarnContext(ctx, "Failed to inspect container", "error", err, "container_id", id)
+					return
 				}
 			}
 
+			stat, err := c.dockerClient.GetContainerStats(ctx, id)
+			if err != nil {
+				log.GetLogger().WarnContext(ctx, "Failed to get container stats", "error", err, "container_id", id)
+				return
+			}
+
+			resultCh <- containerResult{id: id, stat: stat, inspect: inspect}
 		}(container)
 	}
 
