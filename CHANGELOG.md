@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.4.0](https://github.com/H3rmt/docker-exporter/compare/v1.3.1...v1.4.0) (2026-02-21)
+
+
+### Features
+
+* added disk usage metrics ([908f77a](https://github.com/H3rmt/docker-exporter/commit/908f77ae2a68b94b67d28f2e2a2e92bdef135da1))
+* better status reporting: ([3e256f3](https://github.com/H3rmt/docker-exporter/commit/3e256f357bde743aea02cb999f871ba3a4e7e5b9))
+* better status reporting: ([a518e9c](https://github.com/H3rmt/docker-exporter/commit/a518e9c6b3cc7c86cd3e3ae64d3cc212fa643538))
+
 ## [1.3.1](https://github.com/H3rmt/docker-exporter/compare/v1.3.0...v1.3.1) (2026-02-10)
 
 
