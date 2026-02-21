@@ -33,12 +33,14 @@ var (
 	logFormat                 string
 	homepage                  bool
 	sizeCacheDuration         time.Duration
+	diskUsageCacheDuration    time.Duration
 	address                   string
 	port                      string
 	dockerHost                string
 	collectorSystem           bool
 	collectorContainer        bool
 	collectorContainerNetwork bool
+	collectorContainerCPU     bool
 	collectorContainerFS      bool
 	collectorContainerStats   bool
 )
@@ -60,19 +62,21 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Verbose mode (enabled debug logs).")
-	rootCmd.Flags().BoolVar(&trace, "trace", false, "Very Verbose mode (enabled trace logs).")
-	rootCmd.Flags().BoolVarP(&quiet, "quiet", "q", false, "Quiet mode (disables info logs).")
-	rootCmd.Flags().BoolVar(&internalMetrics, "internal-metrics", false, "Enable internal go metrics.")
-	rootCmd.Flags().StringVar(&logFormat, "log-format", "logfmt", "Log format: 'logfmt' or 'json'.")
-	rootCmd.Flags().BoolVar(&homepage, "homepage", true, "Show homepage with charts.")
-	rootCmd.Flags().DurationVar(&sizeCacheDuration, "size-cache-duration", time.Duration(300)*time.Second, "Duration to wait before refreshing container size cache.")
-	rootCmd.Flags().StringVarP(&address, "address", "a", "0.0.0.0", "Address to listen on.")
-	rootCmd.Flags().StringVarP(&port, "port", "p", "9100", "Port to listen on.")
 	rootCmd.Flags().StringVarP(&dockerHost, "docker-host", "d", "unix:///var/run/docker.sock", "Host to connect to.")
+	rootCmd.Flags().BoolVarP(&verbose, "log.verbose", "v", false, "Verbose mode (enabled debug logs).")
+	rootCmd.Flags().BoolVar(&trace, "log.trace", false, "Very Verbose mode (enabled trace logs).")
+	rootCmd.Flags().BoolVarP(&quiet, "log.quiet", "q", false, "Quiet mode (disables info logs).")
+	rootCmd.Flags().StringVar(&logFormat, "log.format", "logfmt", "Log format: 'logfmt' or 'json'.")
+	rootCmd.Flags().DurationVar(&sizeCacheDuration, "cache.size-cache-duration", time.Duration(300)*time.Second, "Duration to wait before refreshing container size cache.")
+	rootCmd.Flags().DurationVar(&diskUsageCacheDuration, "cache.disk-usage-cache-seconds", time.Duration(120)*time.Second, "Duration to wait before refreshing docker disk usage cache.")
+	rootCmd.Flags().BoolVar(&homepage, "web.homepage", true, "Show homepage with charts.")
+	rootCmd.Flags().StringVarP(&address, "web.address", "a", "0.0.0.0", "Address to listen on.")
+	rootCmd.Flags().StringVarP(&port, "web.port", "p", "9100", "Port to listen on.")
+	rootCmd.Flags().BoolVar(&internalMetrics, "collector.internal-metrics", false, "Enable internal go metrics.")
 	rootCmd.Flags().BoolVar(&collectorSystem, "collector.system", true, "Enable system collector (exporter info, host OS info).")
 	rootCmd.Flags().BoolVar(&collectorContainer, "collector.container", true, "Enable container collector.")
-	rootCmd.Flags().BoolVar(&collectorContainerNetwork, "collector.container.network", true, "Enable container network collector.")
+	rootCmd.Flags().BoolVar(&collectorContainerNetwork, "collector.container.net", true, "Enable container network collector.")
+	rootCmd.Flags().BoolVar(&collectorContainerCPU, "collector.container.cpu", true, "Enable container cpu usage collector.")
 	rootCmd.Flags().BoolVar(&collectorContainerFS, "collector.container.fs", true, "Enable container fs collector.")
 	rootCmd.Flags().BoolVar(&collectorContainerStats, "collector.container.stats", true, "Enable container stats collector.")
 }
@@ -103,8 +107,7 @@ func run(*cobra.Command, []string) {
 		log.GetLogger().Info("IP environment variable not set, pass it do display the IP of the exporter on the homepage", "missing_env", "IP")
 	}
 
-	// Initialize Docker client and metrics TODO
-	dockerClient, err := docker.NewDockerClient(dockerHost, sizeCacheDuration, sizeCacheDuration)
+	dockerClient, err := docker.NewDockerClient(dockerHost, sizeCacheDuration, diskUsageCacheDuration)
 	if err != nil {
 		log.GetLogger().Error("Failed to create Docker client", "error", err, "docker_host", dockerHost)
 		os.Exit(1)
@@ -113,8 +116,9 @@ func run(*cobra.Command, []string) {
 	log.GetLogger().Info("Initializing Docker Prometheus exporter...")
 	collectorConfig := exporter.CollectorConfig{
 		System:           collectorSystem,
-		Container:        collectorContainer || collectorContainerNetwork || collectorContainerFS || collectorContainerStats,
+		Container:        collectorContainer || collectorContainerNetwork || collectorContainerFS || collectorContainerStats || collectorContainerCPU,
 		ContainerNetwork: collectorContainerNetwork,
+		ContainerCPU:     collectorContainerCPU,
 		ContainerFS:      collectorContainerFS,
 		ContainerStats:   collectorContainerStats,
 	}
@@ -169,8 +173,8 @@ func run(*cobra.Command, []string) {
 					sem <- struct{}{}        // acquire
 					defer func() { <-sem }() // release
 
-					_, _ = dockerClient.InspectContainer(ctx, c.ID, true)
-					_, _ = dockerClient.GetContainerStats(ctx, c.ID)
+					_, _ = dockerClient.InspectContainer(ctx, c.ID, collectorConfig.ContainerFS)
+					_, _ = dockerClient.GetContainerStats(ctx, c.ID, true) // always true because webapi shows cpu usage even if collector is disabled
 				}(container)
 			}
 			wg.Wait()

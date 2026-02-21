@@ -20,6 +20,7 @@ type CollectorConfig struct {
 	System           bool
 	Container        bool
 	ContainerNetwork bool
+	ContainerCPU     bool
 	ContainerFS      bool
 	ContainerStats   bool
 }
@@ -287,10 +288,18 @@ func (c *DockerCollector) Describe(ch chan<- *prometheus.Desc) {
 		}
 	}
 
+	if c.config.ContainerCPU {
+		for _, desc := range []*prometheus.Desc{
+			containerCpuUserNSDesc, containerCpuKernelNSDesc, containerCpuNSDesc,
+			containerCpuPercent, containerCpuPercentHost,
+		} {
+			ch <- desc
+		}
+	}
+
 	if c.config.ContainerStats {
 		for _, desc := range []*prometheus.Desc{
 			containerPidsDesc,
-			containerCpuUserNSDesc, containerCpuKernelNSDesc, containerCpuNSDesc, containerCpuPercent, containerCpuPercentHost,
 			containerMemLimitKiBDesc, containerMemUsageKiBDesc,
 			containerBlockInputBytesDesc, containerBlockOutputBytesDesc,
 		} {
@@ -351,7 +360,7 @@ func (c *DockerCollector) Collect(ch chan<- prometheus.Metric) {
 	formatContainerCreated(ch, hostname, containerInfo)
 	formatContainerPorts(ch, hostname, containerInfo)
 
-	needStat := c.config.ContainerStats || c.config.ContainerNetwork
+	needStat := c.config.ContainerStats || c.config.ContainerNetwork || c.config.ContainerCPU
 
 	resultCh := make(chan containerResult, len(containerInfo))
 	var wg sync.WaitGroup
@@ -370,7 +379,7 @@ func (c *DockerCollector) Collect(ch chan<- prometheus.Metric) {
 
 			var stat docker.ContainerStats
 			if needStat {
-				stat, err = c.dockerClient.GetContainerStats(ctx, id)
+				stat, err = c.dockerClient.GetContainerStats(ctx, id, c.config.ContainerCPU)
 				if err != nil {
 					log.GetLogger().WarnContext(ctx, "Failed to get container stats", "error", err, "container_id", id)
 					return
@@ -400,13 +409,16 @@ func (c *DockerCollector) Collect(ch chan<- prometheus.Metric) {
 			formatContainerSizeRw(ch, hostname, result.id, result.inspect)
 		}
 
-		if c.config.ContainerStats {
-			formatContainerPids(ch, hostname, result.id, result.stat)
+		if c.config.ContainerCPU {
 			formatContainerCpuMicroSeconds(ch, hostname, result.id, result.stat)
 			formatContainerCpuUserMicroSeconds(ch, hostname, result.id, result.stat)
 			formatContainerCpuKernelMicroSeconds(ch, hostname, result.id, result.stat)
 			formatContainerCpuPercentHost(ch, hostname, result.id, result.stat)
 			formatContainerCpuPercent(ch, hostname, result.id, result.stat, result.inspect)
+		}
+
+		if c.config.ContainerStats {
+			formatContainerPids(ch, hostname, result.id, result.stat)
 			formatContainerMemLimitKiB(ch, hostname, result.id, result.stat)
 			formatContainerMemUsageKiB(ch, hostname, result.id, result.stat)
 			formatBlockOutputBytes(ch, hostname, result.id, result.stat)

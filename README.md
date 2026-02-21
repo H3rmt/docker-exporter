@@ -53,7 +53,7 @@ The exporter provides the following metrics:
 | `docker_container_net_receive_errors_total`     | Total number of receive errors                                                               | container.net   | Counter | `hostname`, `container_id`                                                |
 
 `docker_container_rootfs_size_bytes` and `docker_container_rw_size_bytes` are cached and only updated every 5 minutes.
-This can be customized with the --size-cache-seconds flag.
+This can be customized with the `--cache.size-cache-seconds` flag.
 
 `docker_exporter_host_os_info` reads from `/etc/os-release` and is cached with a 5-minute TTL. This allows the exporter
 to detect OS version changes (e.g., after system updates) without requiring a container restart.
@@ -62,29 +62,33 @@ to detect OS version changes (e.g., after system updates) without requiring a co
 container's cgroup settings into account. (you can use `--cpus=3` to limit a container to only three cpu cores which
 this metric will report correctly)
 
+`docker_disk_usage_*` are cached and only updated every 2 minutes. This can be customized with the `--cache.disk-usage-cache-seconds` flag.
+
 ![dashboard_preview](.github/imgs/img_1.png)
 
 ## Usage
 
 ### Command-line options
 
-| Option                          | Description                                             | Default                       |
-|---------------------------------|---------------------------------------------------------|-------------------------------|
-| `--verbose`, `-v`               | Enable verbose mode (debug logs)                        | `false`                       |
-| `--quiet`, `-q`                 | Enable quiet mode (disable info logs)                   | `false`                       |
-| `--trace`                       | Enable trace mode (very vebose logs)                    | `false`                       |
-| `--log-format`                  | Log format: 'logfmt' or 'json'                          | `logfmt`                      |
-| `--homepage`                    | Show homepage with charts.                              | `true`                        |
-| `--internal-metrics`            | Enable internal go metrics                              | `false`                       |
-| `--size-cache-duration`         | Duration to wait before refreshing container size cache | `300s`                        |
-| `--address`, `-a`               | Address to listen on                                    | `0.0.0.0`                     |
-| `--port`, `-p`                  | Port to listen on                                       | `9100`                        |
-| `--docker-host`, `-d`           | Host to connect to                                      | `unix:///var/run/docker.sock` |
-| `--collector.system`            | Enable system collector (exporter info, host OS info).  | `true`                        |
-| `--collector.container`         | Enable container collector.                             | `true`                        |
-| `--collector.container.network` | Enable container network collector.                     | `true`                        |
-| `--collector.container.fs`      | Enable container fs collector.                          | `true`                        |
-| `--collector.container.stats`   | Enable container stats collector.                       | `true`                        |
+| Option                             | Description                                                | Default                       |
+|------------------------------------|------------------------------------------------------------|-------------------------------|
+| `--log.verbose`, `-v`              | Enable verbose mode (debug logs)                           | `false`                       |
+| `--log.quiet`, `-q`                | Enable quiet mode (disable info logs)                      | `false`                       |
+| `--log.trace`                      | Enable trace mode (very vebose logs)                       | `false`                       |
+| `--log.format`                     | Log format: 'logfmt' or 'json'                             | `logfmt`                      |
+| `--collector.internal-metrics`     | Enable internal go metrics                                 | `false`                       |
+| `--cache.size-cache-duration`      | Duration to wait before refreshing container size cache    | `300s`                        |
+| `--cache.disk-usage-cache-seconds` | Duration to wait before refreshing docker disk usage cache | `120s`                        |
+| `--web.homepage`                   | Show homepage with charts.                                 | `true`                        |
+| `--web.address`, `-a`              | Address to listen on                                       | `0.0.0.0`                     |
+| `--web.port`, `-p`                 | Port to listen on                                          | `9100`                        |
+| `--docker-host`, `-d`              | Host to connect to                                         | `unix:///var/run/docker.sock` |
+| `--collector.system`               | Enable system collector (exporter info, host OS info).     | `true`                        |
+| `--collector.container`            | Enable container collector.                                | `true`                        |
+| `--collector.container.net`        | Enable container network collector.                        | `true`                        |
+| `--collector.container.cpu`        | Enable container cpu usage collector.                      | `true`                        |
+| `--collector.container.fs`         | Enable container fs collector.                             | `true`                        |
+| `--collector.container.stats`      | Enable container stats collector.                          | `true`                        |
 
 ### Endpoints
 
@@ -161,8 +165,9 @@ Example JSON output:
     "version": "v1.3.1"
   }
   ```
-  
+
 ### Example Metrics
+
 ```shell
 # HELP docker_container_block_input_total Total number of bytes read from disk
 # TYPE docker_container_block_input_total counter
@@ -284,17 +289,17 @@ docker_exporter_info{hostname="arch-laptop",version="main"} 1
 # Run with default settings
 ./docker-exporter
 
-# Run with custom port and address
-./docker-exporter --port 9101 --address 127.0.0.1
+# Run with custom port and address, disable fs collector
+./docker-exporter --web.port 9101 --web.address 127.0.0.1 --collector.container.fs=false
 
 # Enable verbose logging and disable homepage
-./docker-exporter --verbose --homepage=false
+./docker-exporter --log.verbose --web.homepage=false
 
 # Use JSON log format
-./docker-exporter --log-format=json
+./docker-exporter --log.format=json
 
 # Enable internal metrics and use docker with tcp socket
-./docker-exporter --internal-metrics --docker-host tcp://127.0.0.1:2375
+./docker-exporter --collector.internal-metrics --docker-host tcp://127.0.0.1:2375
 ```
 
 ## Run with docker
@@ -305,7 +310,7 @@ docker run -d --name docker-exporter \
   -e TZ="Europe/Berlin" -p 9100:9100 \
   -v /var/run/docker.sock:/var/run/docker.sock:ro -v /proc/stat:/proc/stat:ro -v /proc/meminfo:/proc/meminfo:ro \
   -v /etc/hostname:/etc/hostname:ro -v /etc/os-release:/etc/os-release:ro \
-  ghcr.io/h3rmt/docker-exporter:latest -p 9100 --log-format logfmt --verbose
+  ghcr.io/h3rmt/docker-exporter:latest -p 9100 --log.format logfmt --log.verbose
 ```
 
 ## Run with docker-compose
@@ -327,7 +332,7 @@ services:
       - /proc/meminfo:/proc/meminfo:ro
     ports:
       - 9100:9100
-    command: [ "--size-cache-seconds=600", "--log-format=json" ]
+    command: [ "--cache.size-cache-seconds=600", "--log.format=json" ]
 ```
 
 ## Building from source
@@ -384,5 +389,5 @@ services:
       - ./meminfo:/proc/meminfo:ro
     ports:
       - 9100:9100
-    command: [ "--size-cache-seconds=600", "--internal-metrics" ]
+    command: [ "--cache.size-cache-seconds=600", "--collector.internal-metrics" ]
 ```

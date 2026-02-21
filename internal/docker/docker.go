@@ -15,6 +15,9 @@ type Client struct {
 
 	// disk usage cache for expensive DiskUsage
 	diskUsageCache Cache[DiskUsage]
+
+	// Cache to calculate cpu usage
+	cpuStatsCache map[string]cpuEntry // containerID -> sizes
 }
 
 func NewDockerClient(host string, sizeCacheDuration time.Duration, diskUsageCacheDuration time.Duration) (*Client, error) {
@@ -30,5 +33,6 @@ func NewDockerClient(host string, sizeCacheDuration time.Duration, diskUsageCach
 		client:         c,
 		sizeCache:      NewCacheFull("sizeCache", sizeCacheDuration, loadContainerSizeFunction(c), copyMap),
 		diskUsageCache: NewCache("diskUsageCache", diskUsageCacheDuration, loadDiskUsageFunction(c)),
+		cpuStatsCache:  make(map[string]cpuEntry),
 	}, nil
 }

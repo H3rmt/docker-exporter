@@ -130,7 +130,7 @@ func HandleAPIContainers(cli *docker.Client) http.Handler {
 				var maxLimitedCpus float64
 				var cpuLimitedUsage uint64
 				if c.State == container.StateRunning {
-					if st, err := cli.GetContainerStats(ctx, c.ID); err == nil {
+					if st, err := cli.GetContainerStats(ctx, c.ID, true); err == nil {
 						memKiB = st.MemoryUsageKiB
 						memLimitKiB = st.MemoryLimitKiB
 

@@ -16,8 +16,6 @@ type ContainerCpuStats struct {
 	UsageUserNS      uint64
 	UsageKernelNS    uint64
 	PreUsageNS       uint64
-	PreUsageUserNS   uint64
-	PreUsageKernelNS uint64
 	SystemUsageNS    uint64
 	PreSystemUsageNS uint64
 
@@ -93,8 +91,13 @@ type recStats struct {
 	} `json:"networks"`
 }
 
-func (c *Client) GetContainerStats(ctx context.Context, containerID string) (ContainerStats, error) {
-	stats, err := c.getContainerStats(ctx, containerID)
+type cpuEntry struct {
+	UsageNS       uint64
+	SystemUsageNS uint64
+}
+
+func (c *Client) GetContainerStats(ctx context.Context, containerID string, cpu bool) (ContainerStats, error) {
+	stats, err := c.getContainerStats(ctx, containerID, cpu)
 	if err != nil {
 		glob.SetError("GetContainerStats", &err)
 		return ContainerStats{}, err
@@ -103,11 +106,10 @@ func (c *Client) GetContainerStats(ctx context.Context, containerID string) (Con
 	return stats, nil
 }
 
-func (c *Client) getContainerStats(ctx context.Context, containerID string) (ContainerStats, error) {
+func (c *Client) getContainerStats(ctx context.Context, containerID string, cpu bool) (ContainerStats, error) {
 	stats, err := c.client.ContainerStats(ctx, containerID, client.ContainerStatsOptions{
-		Stream: false,
-		// TODO rework this, store prev value and compare with current to prevent 1sec delay
-		IncludePreviousSample: true,
+		Stream:                false,
+		IncludePreviousSample: false,
 	})
 	if err != nil {
 		return ContainerStats{}, err
@@ -123,16 +125,22 @@ func (c *Client) getContainerStats(ctx context.Context, containerID string) (Con
 	if err := json.NewDecoder(stats.Body).Decode(&rec); err != nil {
 		return ContainerStats{}, err
 	}
-	cpu := ContainerCpuStats{
-		UsageNS:          rec.CpuStats.CpuUsage.TotalUsage,
-		UsageUserNS:      rec.CpuStats.CpuUsage.UsageInUsermode,
-		UsageKernelNS:    rec.CpuStats.CpuUsage.UsageInKernelmode,
-		PreUsageNS:       rec.PreCpuStats.CpuUsage.TotalUsage,
-		PreUsageUserNS:   rec.PreCpuStats.CpuUsage.UsageInUsermode,
-		PreUsageKernelNS: rec.PreCpuStats.CpuUsage.UsageInKernelmode,
-		SystemUsageNS:    rec.CpuStats.SystemCpuUsage,
-		PreSystemUsageNS: rec.PreCpuStats.SystemCpuUsage,
-		OnlineCpus:       rec.CpuStats.OnlineCpus,
+
+	var data ContainerCpuStats
+	if cpu {
+		data = ContainerCpuStats{
+			UsageNS:          rec.CpuStats.CpuUsage.TotalUsage,
+			UsageUserNS:      rec.CpuStats.CpuUsage.UsageInUsermode,
+			UsageKernelNS:    rec.CpuStats.CpuUsage.UsageInKernelmode,
+			PreUsageNS:       c.cpuStatsCache[containerID].UsageNS,
+			SystemUsageNS:    rec.CpuStats.SystemCpuUsage,
+			PreSystemUsageNS: c.cpuStatsCache[containerID].SystemUsageNS,
+			OnlineCpus:       rec.CpuStats.OnlineCpus,
+		}
+		c.cpuStatsCache[containerID] = cpuEntry{
+			UsageNS:       rec.CpuStats.CpuUsage.TotalUsage,
+			SystemUsageNS: rec.CpuStats.SystemCpuUsage,
+		}
 	}
 
 	// Network totals
@@ -182,7 +190,7 @@ func (c *Client) getContainerStats(ctx context.Context, containerID string) (Con
 
 	stat := ContainerStats{
 		PIds:             rec.PidsStats.Current,
-		Cpu:              cpu,
+		Cpu:              data,
 		MemoryUsageKiB:   (rec.MemoryStats.Usage - rec.MemoryStats.Stats.InactiveFile) / 1024,
 		MemoryLimitKiB:   rec.MemoryStats.Limit / 1024,
 		Net:              net,
