@@ -8,7 +8,45 @@ Grafana dashboard is available at [dashboard.json](./dashboard.json)
 
 ![dashboard_preview](.github/imgs/img.png)
 
-## Exported Metrics
+## Usage
+
+### Command-line options
+
+| Option                             | Description                                                | Default                       |
+|------------------------------------|------------------------------------------------------------|-------------------------------|
+| `--log.verbose`, `-v`              | Enable verbose mode (debug logs)                           | `false`                       |
+| `--log.quiet`, `-q`                | Enable quiet mode (disable info logs)                      | `false`                       |
+| `--log.trace`                      | Enable trace mode (very vebose logs)                       | `false`                       |
+| `--log.format`                     | Log format: 'logfmt' or 'json'                             | `logfmt`                      |
+| `--collector.internal-metrics`     | Enable internal go metrics                                 | `false`                       |
+| `--cache.size-cache-duration`      | Duration to wait before refreshing container size cache    | `300s`                        |
+| `--cache.disk-usage-cache-seconds` | Duration to wait before refreshing docker disk usage cache | `120s`                        |
+| `--web.homepage`                   | Show homepage with charts.                                 | `true`                        |
+| `--web.address`, `-a`              | Address to listen on                                       | `0.0.0.0`                     |
+| `--web.port`, `-p`                 | Port to listen on                                          | `9100`                        |
+| `--docker-host`, `-d`              | Host to connect to                                         | `unix:///var/run/docker.sock` |
+| `--collector.system`               | Enable system collector (exporter info, host OS info).     | `true`                        |
+| `--collector.container`            | Enable container collector.                                | `true`                        |
+| `--collector.container.net`        | Enable container network collector.                        | `true`                        |
+| `--collector.container.cpu`        | Enable container cpu usage collector.                      | `true`                        |
+| `--collector.container.fs`         | Enable container fs collector.                             | `true`                        |
+| `--collector.container.stats`      | Enable container stats collector.                          | `true`                        |
+
+### Endpoints
+
+- `/metrics` - Prometheus metrics endpoint
+- `/status` - Status endpoint
+- `/` - Homepage with live charts
+- `/api` - Api used by homepage for graphs and container info
+
+<table>
+  <tr>
+    <td><img src=".github/imgs/img_2.png" alt="dashboard_preview" /></td>
+    <td><img src=".github/imgs/img_3.png" alt="dashboard_preview" /></td>
+  </tr>
+</table>
+
+### Exported Metrics
 
 The exporter provides the following metrics:
 
@@ -65,44 +103,6 @@ this metric will report correctly)
 `docker_disk_usage_*` are cached and only updated every 2 minutes. This can be customized with the `--cache.disk-usage-cache-seconds` flag.
 
 ![dashboard_preview](.github/imgs/img_1.png)
-
-## Usage
-
-### Command-line options
-
-| Option                             | Description                                                | Default                       |
-|------------------------------------|------------------------------------------------------------|-------------------------------|
-| `--log.verbose`, `-v`              | Enable verbose mode (debug logs)                           | `false`                       |
-| `--log.quiet`, `-q`                | Enable quiet mode (disable info logs)                      | `false`                       |
-| `--log.trace`                      | Enable trace mode (very vebose logs)                       | `false`                       |
-| `--log.format`                     | Log format: 'logfmt' or 'json'                             | `logfmt`                      |
-| `--collector.internal-metrics`     | Enable internal go metrics                                 | `false`                       |
-| `--cache.size-cache-duration`      | Duration to wait before refreshing container size cache    | `300s`                        |
-| `--cache.disk-usage-cache-seconds` | Duration to wait before refreshing docker disk usage cache | `120s`                        |
-| `--web.homepage`                   | Show homepage with charts.                                 | `true`                        |
-| `--web.address`, `-a`              | Address to listen on                                       | `0.0.0.0`                     |
-| `--web.port`, `-p`                 | Port to listen on                                          | `9100`                        |
-| `--docker-host`, `-d`              | Host to connect to                                         | `unix:///var/run/docker.sock` |
-| `--collector.system`               | Enable system collector (exporter info, host OS info).     | `true`                        |
-| `--collector.container`            | Enable container collector.                                | `true`                        |
-| `--collector.container.net`        | Enable container network collector.                        | `true`                        |
-| `--collector.container.cpu`        | Enable container cpu usage collector.                      | `true`                        |
-| `--collector.container.fs`         | Enable container fs collector.                             | `true`                        |
-| `--collector.container.stats`      | Enable container stats collector.                          | `true`                        |
-
-### Endpoints
-
-- `/metrics` - Prometheus metrics endpoint
-- `/status` - Status endpoint
-- `/` - Homepage with live charts
-- `/api` - Api used by homepage for graphs and container info
-
-<table>
-  <tr>
-    <td><img src=".github/imgs/img_2.png" alt="dashboard_preview" /></td>
-    <td><img src=".github/imgs/img_3.png" alt="dashboard_preview" /></td>
-  </tr>
-</table>
 
 ### Logging
 
@@ -302,7 +302,7 @@ docker_exporter_info{hostname="arch-laptop",version="main"} 1
 ./docker-exporter --collector.internal-metrics --docker-host tcp://127.0.0.1:2375
 ```
 
-## Run with docker
+### Run with docker
 
 ```bash
 docker run -d --name docker-exporter \
@@ -313,7 +313,7 @@ docker run -d --name docker-exporter \
   ghcr.io/h3rmt/docker-exporter:latest -p 9100 --log.format logfmt --log.verbose
 ```
 
-## Run with docker-compose
+### Run with docker-compose
 
 ```yaml
 services:
@@ -335,7 +335,7 @@ services:
     command: [ "--cache.size-cache-seconds=600", "--log.format=json" ]
 ```
 
-## Building from source
+### Building from source
 
 ```bash
 go build -o docker-exporter ./cmd/main.go
