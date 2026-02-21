@@ -98,14 +98,13 @@ func run(*cobra.Command, []string) {
 		"docker_host", dockerHost,
 		"log_format", logFormat,
 	)
-	docker.SetSizeCacheDuration(sizeCacheDuration)
 
 	if os.Getenv("IP") == "" {
 		log.GetLogger().Info("IP environment variable not set, pass it do display the IP of the exporter on the homepage", "missing_env", "IP")
 	}
 
-	// Initialize Docker client and metrics
-	dockerClient, err := docker.NewDockerClient(dockerHost)
+	// Initialize Docker client and metrics TODO
+	dockerClient, err := docker.NewDockerClient(dockerHost, sizeCacheDuration, sizeCacheDuration)
 	if err != nil {
 		log.GetLogger().Error("Failed to create Docker client", "error", err, "docker_host", dockerHost)
 		os.Exit(1)
@@ -147,6 +146,9 @@ func run(*cobra.Command, []string) {
 		log.GetLogger().Info("Collecting initial metrics in background...")
 		ctx := context.Background()
 		start := time.Now()
+
+		// load disk usage cache
+		dockerClient.Disk(ctx)
 
 		// Perform an initial collection to warm up caches
 		containers, err := dockerClient.ListAllRunningContainers(ctx)

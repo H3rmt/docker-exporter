@@ -105,7 +105,8 @@ func (c *Client) GetContainerStats(ctx context.Context, containerID string) (Con
 
 func (c *Client) getContainerStats(ctx context.Context, containerID string) (ContainerStats, error) {
 	stats, err := c.client.ContainerStats(ctx, containerID, client.ContainerStatsOptions{
-		Stream:                false,
+		Stream: false,
+		// TODO rework this, store prev value and compare with current to prevent 1sec delay
 		IncludePreviousSample: true,
 	})
 	if err != nil {

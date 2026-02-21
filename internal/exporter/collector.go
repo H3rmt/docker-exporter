@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/h3rmt/docker-exporter/internal/docker"
 	"github.com/h3rmt/docker-exporter/internal/glob"
@@ -41,6 +42,54 @@ var (
 		"docker_exporter_host_os_info",
 		"Information about the host operating system",
 		[]string{"hostname", "os_name", "os_version"},
+		nil,
+	)
+	dockerDiskUsageContainersTotalSize = prometheus.NewDesc(
+		"docker_disk_usage_container_total_size",
+		"Information about Size of containers on disk.",
+		[]string{"hostname"},
+		nil,
+	)
+	dockerDiskUsageContainersReclaimable = prometheus.NewDesc(
+		"docker_disk_usage_container_reclaimable",
+		"Information about Size of containers on disk that can be reclaimed.",
+		[]string{"hostname"},
+		nil,
+	)
+	dockerDiskUsageImagesTotalSize = prometheus.NewDesc(
+		"docker_disk_usage_images_total_size",
+		"Information about Size of images on disk.",
+		[]string{"hostname"},
+		nil,
+	)
+	dockerDiskUsageImagesReclaimable = prometheus.NewDesc(
+		"docker_disk_usage_images_reclaimable",
+		"Information about Size of images on disk that can be reclaimed.",
+		[]string{"hostname"},
+		nil,
+	)
+	dockerDiskUsageBuildCacheTotalSize = prometheus.NewDesc(
+		"docker_disk_usage_build_cache_total_size",
+		"Information about Size of build cache on disk.",
+		[]string{"hostname"},
+		nil,
+	)
+	dockerDiskUsageBuildCacheReclaimable = prometheus.NewDesc(
+		"docker_disk_usage_build_cache_reclaimable",
+		"Information about Size of build on disk that can be reclaimed.",
+		[]string{"hostname"},
+		nil,
+	)
+	dockerDiskUsageVolumesTotalSize = prometheus.NewDesc(
+		"docker_disk_usage_volumes_total_size",
+		"Information about Size of volumes on disk.",
+		[]string{"hostname"},
+		nil,
+	)
+	dockerDiskUsageVolumesReclaimable = prometheus.NewDesc(
+		"docker_disk_usage_volumes_reclaimable",
+		"Information about Size of volumes on disk that can be reclaimed.",
+		[]string{"hostname"},
 		nil,
 	)
 	containerInfoDesc = prometheus.NewDesc(
@@ -217,8 +266,15 @@ func NewDockerCollector(client *docker.Client, version string, config CollectorC
 
 func (c *DockerCollector) Describe(ch chan<- *prometheus.Desc) {
 	if c.config.System {
-		ch <- exporterInfoDesc
-		ch <- hostOSInfoDesc
+		for _, desc := range []*prometheus.Desc{
+			exporterInfoDesc, hostOSInfoDesc,
+			dockerDiskUsageContainersTotalSize, dockerDiskUsageContainersReclaimable,
+			dockerDiskUsageImagesTotalSize, dockerDiskUsageImagesReclaimable,
+			dockerDiskUsageBuildCacheTotalSize, dockerDiskUsageBuildCacheReclaimable,
+			dockerDiskUsageVolumesTotalSize, dockerDiskUsageVolumesReclaimable,
+		} {
+			ch <- desc
+		}
 	}
 
 	if c.config.Container {
@@ -265,29 +321,18 @@ type containerResult struct {
 
 func (c *DockerCollector) Collect(ch chan<- prometheus.Metric) {
 	ctx := context.Background()
+	start := time.Now()
 
 	hostname := getHostname(ctx)
 
 	if c.config.System {
-		// Export version information
-		ch <- prometheus.MustNewConstMetric(
-			exporterInfoDesc,
-			prometheus.GaugeValue,
-			1,
-			hostname,
-			c.version,
-		)
-		// Export OS information
+		formatSystemInfo(ch, hostname, c.version)
 		osInfo := osinfo.GetOSInfo(ctx)
-		ch <- prometheus.MustNewConstMetric(
-			hostOSInfoDesc,
-			prometheus.GaugeValue,
-			1,
-			hostname,
-			osInfo.Name,
-			osInfo.VersionID,
-		)
+		formatSystemHostInfo(ch, hostname, osInfo)
+		disk := c.dockerClient.Disk(ctx)
+		formatSystemDiskInfo(ch, hostname, disk)
 	}
+	log.GetLogger().DebugContext(ctx, "Finished collecting system metrics", "time", time.Since(start))
 
 	if !c.config.Container {
 		return
@@ -298,6 +343,7 @@ func (c *DockerCollector) Collect(ch chan<- prometheus.Metric) {
 		log.GetLogger().ErrorContext(ctx, "Failed to list running containers", "error", err)
 		return
 	}
+	log.GetLogger().DebugContext(ctx, "Found running containers", "time", time.Since(start), "count", len(containerInfo))
 
 	formatContainerInfo(ch, hostname, containerInfo)
 	formatContainerNames(ch, hostname, containerInfo)
@@ -334,6 +380,7 @@ func (c *DockerCollector) Collect(ch chan<- prometheus.Metric) {
 			resultCh <- containerResult{id: id, stat: stat, inspect: inspect}
 		}(container)
 	}
+	log.GetLogger().DebugContext(ctx, "Waiting for container stats", "time", time.Since(start), "count", len(containerInfo))
 
 	go func() {
 		wg.Wait()
@@ -375,6 +422,8 @@ func (c *DockerCollector) Collect(ch chan<- prometheus.Metric) {
 			formatContainerNetRecvErrors(ch, hostname, result.id, result.stat)
 		}
 	}
+
+	log.GetLogger().DebugContext(ctx, "Finished collecting metrics", "time", time.Since(start))
 }
 
 func RegisterCollectorsWithRegistry(cli *docker.Client, reg *prometheus.Registry, version string, config CollectorConfig) {

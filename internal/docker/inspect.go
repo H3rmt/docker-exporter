@@ -64,12 +64,38 @@ func (c *Client) InspectContainer(ctx context.Context, containerID string, size 
 	return inspect, nil
 }
 
+type sizeEntry struct {
+	SizeRootFs int64
+	SizeRw     int64
+}
+
+func loadContainerSizeFunction(c *client.Client) func(ctx context.Context) (map[string]sizeEntry, error) {
+	return func(ctx context.Context) (map[string]sizeEntry, error) {
+		containers, err := c.ContainerList(ctx, client.ContainerListOptions{
+			All:  true,
+			Size: true,
+		})
+		// Prepare results
+		sizes := make(map[string]sizeEntry)
+		if err != nil {
+			glob.SetError("refreshSizes", &err)
+			log.GetLogger().ErrorContext(ctx, "Failed to refresh container sizes", "error", err)
+		} else {
+			glob.SetError("refreshSizes", nil)
+			for _, item := range containers.Items {
+				sizes[item.ID] = sizeEntry{SizeRootFs: item.SizeRootFs, SizeRw: item.SizeRw}
+			}
+		}
+		return sizes, nil
+	}
+}
+
 func (c *Client) inspectContainer(ctx context.Context, containerID string, size bool) (ContainerInspect, error) {
 	var sizeRootFs int64
 	var sizeRw int64
 	if size {
 		// Ensure we have current (or at least existing) cached size values.
-		sizes := c.getCachedValues(ctx)
+		sizes := c.sizeCache.GetValues(ctx)
 		// Apply cached sizes if available
 		se, ok := sizes[containerID]
 		if ok {

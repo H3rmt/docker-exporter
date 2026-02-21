@@ -1,9 +1,8 @@
 # Docker Prometheus Exporter
 
-This project is similar to [prometheus-podman-exporter](https://github.com/containers/prometheus-podman-exporter), but
-for Docker containers instead of Podman containers.
-It exports Docker container metrics in Prometheus format and also provides a simple homepage with live charts
-for cpu and memory usage.
+This project is similar to [prometheus-podman-exporter](https://github.com/containers/prometheus-podman-exporter), but for Docker containers rather than Podman containers.
+It serves as a more lightweight alternative to Cadvisor, consuming approximately 20MB of RAM instead of 150–200MB.
+It exports Docker container metrics in Prometheus format and also provides a simple homepage with live charts for cpu and memory usage.
 
 Grafana dashboard is available at [dashboard.json](./dashboard.json)
 
@@ -15,15 +14,23 @@ The exporter provides the following metrics:
 
 | Metric Name                                     | Description                                                                                  | Collector       | Type    | Labels                                                                    |
 |-------------------------------------------------|----------------------------------------------------------------------------------------------|-----------------|---------|---------------------------------------------------------------------------|
-| `docker_exporter_info`                          | Information about the docker exporter                                                        | system          | Gauge   | `hostname`, `version`                                                     |
-| `docker_exporter_host_os_info`                  | Information about the host operating system                                                  | system          | Gauge   | `hostname`, `os_name`, `os_version`                                       |
-| `docker_container_info`                         | Container information                                                                        | system          | Gauge   | `hostname`, `container_id`, `name`, `image_id`, `command`, `network_mode` |
-| `docker_container_name`                         | Name for the container (can be more than one)                                                | container       | Gauge   | `hostname`, `container_id`, `name`                                        |
+| `docker_exporter_info`                          | Information about the docker exporter                                                        | system          | -       | `hostname`, `version`                                                     |
+| `docker_exporter_host_os_info`                  | Information about the host operating system                                                  | system          | -       | `hostname`, `os_name`, `os_version`                                       |
+| `docker_disk_usage_container_total_size`        | Information about Size of containers on disk.                                                | system          | Gauge   | `hostname`                                                                |
+| `docker_disk_usage_container_reclaimable`       | Information about Size of containers on disk that can be reclaimed.                          | system          | Gauge   | `hostname`                                                                |
+| `docker_disk_usage_images_total_size`           | Information about Size of images on disk.                                                    | system          | Gauge   | `hostname`                                                                |
+| `docker_disk_usage_images_reclaimable`          | Information about Size of images on disk that can be reclaimed.                              | system          | Gauge   | `hostname`                                                                |
+| `docker_disk_usage_build_cache_total_size`      | Information about Size of build cache on disk.                                               | system          | Gauge   | `hostname`                                                                |
+| `docker_disk_usage_build_cache_reclaimable`     | Information about Size of build on disk that can be reclaimed.                               | system          | Gauge   | `hostname`                                                                |
+| `docker_disk_usage_volumes_total_size`          | Information about Size of volumes on disk.                                                   | system          | Gauge   | `hostname`                                                                |
+| `docker_disk_usage_volumes_reclaimable`         | Information about Size of volumes on disk that can be reclaimed.                             | system          | Gauge   | `hostname`                                                                |
+| `docker_container_info`                         | Container information                                                                        | system          | -       | `hostname`, `container_id`, `name`, `image_id`, `command`, `network_mode` |
+| `docker_container_name`                         | Name for the container (can be more than one)                                                | container       | -       | `hostname`, `container_id`, `name`                                        |
 | `docker_container_state`                        | Container State (0=created, 1=running, 2=paused, 3=restarting, 4=removing, 5=exited, 6=dead) | container       | Gauge   | `hostname`, `container_id`                                                |
 | `docker_container_created_seconds`              | Timestamp in seconds when the container was created                                          | container       | Gauge   | `hostname`, `container_id`                                                |
 | `docker_container_started_seconds`              | Timestamp in seconds when the container was started                                          | container       | Gauge   | `hostname`, `container_id`                                                |
 | `docker_container_finished_at_seconds`          | Timestamp in seconds when the container finished                                             | container       | Gauge   | `hostname`, `container_id`                                                |
-| `docker_container_ports`                        | Forwarded Ports                                                                              | container       | Gauge   | `hostname`, `container_id`, `public_port`, `private_port`, `ip`, `type`   |
+| `docker_container_ports`                        | Forwarded Ports                                                                              | container       | -       | `hostname`, `container_id`, `public_port`, `private_port`, `ip`, `type`   |
 | `docker_container_exit_code`                    | Exit code of the container                                                                   | container       | Gauge   | `hostname`, `container_id`                                                |
 | `docker_container_restart_count`                | Number of times the container has been restarted                                             | container       | Counter | `hostname`, `container_id`                                                |
 | `docker_container_rootfs_size_bytes`            | Size of rootfs in this container in bytes                                                    | container.fs    | Gauge   | `hostname`, `container_id`                                                |
@@ -154,6 +161,122 @@ Example JSON output:
     "version": "v1.3.1"
   }
   ```
+  
+### Example Metrics
+```shell
+# HELP docker_container_block_input_total Total number of bytes read from disk
+# TYPE docker_container_block_input_total counter
+docker_container_block_input_total{container_id="1bc4f77b45da7141bd451a12a61abd5c33b04276a3c06bb7a2b805d76eb0895e",hostname="arch-laptop"} 2.71532032e+08
+# HELP docker_container_block_output_total Total number of bytes written to disk
+# TYPE docker_container_block_output_total counter
+docker_container_block_output_total{container_id="1bc4f77b45da7141bd451a12a61abd5c33b04276a3c06bb7a2b805d76eb0895e",hostname="arch-laptop"} 0
+# HELP docker_container_cpu_kernel_nanoseconds_total Time (in nanoseconds) spent by tasks in kernel mode
+# TYPE docker_container_cpu_kernel_nanoseconds_total counter
+docker_container_cpu_kernel_nanoseconds_total{container_id="1bc4f77b45da7141bd451a12a61abd5c33b04276a3c06bb7a2b805d76eb0895e",hostname="arch-laptop"} 3.9633e+08
+# HELP docker_container_cpu_nanoseconds_total Time (in nanoseconds) spent by tasks
+# TYPE docker_container_cpu_nanoseconds_total counter
+docker_container_cpu_nanoseconds_total{container_id="1bc4f77b45da7141bd451a12a61abd5c33b04276a3c06bb7a2b805d76eb0895e",hostname="arch-laptop"} 6.1533e+08
+# HELP docker_container_cpu_percent Percentage of CPU used by the container (relative to max available CPU cores)
+# TYPE docker_container_cpu_percent gauge
+docker_container_cpu_percent{container_id="1bc4f77b45da7141bd451a12a61abd5c33b04276a3c06bb7a2b805d76eb0895e",hostname="arch-laptop"} 0
+# HELP docker_container_cpu_percent_host Percentage of CPU used by the container (relative to host CPU cores)
+# TYPE docker_container_cpu_percent_host gauge
+docker_container_cpu_percent_host{container_id="1bc4f77b45da7141bd451a12a61abd5c33b04276a3c06bb7a2b805d76eb0895e",hostname="arch-laptop"} 0
+# HELP docker_container_cpu_user_nanoseconds_total Time (in nanoseconds) spent by tasks in user mode
+# TYPE docker_container_cpu_user_nanoseconds_total counter
+docker_container_cpu_user_nanoseconds_total{container_id="1bc4f77b45da7141bd451a12a61abd5c33b04276a3c06bb7a2b805d76eb0895e",hostname="arch-laptop"} 2.18999e+08
+# HELP docker_container_created_seconds Timestamp in seconds when the container was created
+# TYPE docker_container_created_seconds counter
+docker_container_created_seconds{container_id="1bc4f77b45da7141bd451a12a61abd5c33b04276a3c06bb7a2b805d76eb0895e",hostname="arch-laptop"} 1.770042164e+09
+# HELP docker_container_exit_code Exit code of the container
+# TYPE docker_container_exit_code gauge
+docker_container_exit_code{container_id="1bc4f77b45da7141bd451a12a61abd5c33b04276a3c06bb7a2b805d76eb0895e",hostname="arch-laptop"} 0
+# HELP docker_container_finished_at_seconds Timestamp in seconds when the container finished
+# TYPE docker_container_finished_at_seconds gauge
+docker_container_finished_at_seconds{container_id="1bc4f77b45da7141bd451a12a61abd5c33b04276a3c06bb7a2b805d76eb0895e",hostname="arch-laptop"} 1.771622617e+09
+# HELP docker_container_info Container information
+# TYPE docker_container_info counter
+docker_container_info{command="/bin/tini -- /docker-entry.sh /server",container_id="1bc4f77b45da7141bd451a12a61abd5c33b04276a3c06bb7a2b805d76eb0895e",hostname="arch-laptop",image_id="sha256:f5df598812f3425efeeebf026c66646042295eacd571de865632108c28a860f9",name="server-esp32-timelapse-server-1",network_mode="server_default"} 1
+# HELP docker_container_mem_limit_kib Container memory limit in KiB
+# TYPE docker_container_mem_limit_kib gauge
+docker_container_mem_limit_kib{container_id="1bc4f77b45da7141bd451a12a61abd5c33b04276a3c06bb7a2b805d76eb0895e",hostname="arch-laptop"} 3.2557936e+07
+# HELP docker_container_mem_usage_kib Container memory usage in KiB
+# TYPE docker_container_mem_usage_kib gauge
+docker_container_mem_usage_kib{container_id="1bc4f77b45da7141bd451a12a61abd5c33b04276a3c06bb7a2b805d76eb0895e",hostname="arch-laptop"} 194852
+# HELP docker_container_name Name for the container (can be more than one)
+# TYPE docker_container_name counter
+docker_container_name{container_id="1bc4f77b45da7141bd451a12a61abd5c33b04276a3c06bb7a2b805d76eb0895e",hostname="arch-laptop",name="server-esp32-timelapse-server-1"} 1
+# HELP docker_container_net_receive_bytes_total Total number of bytes received
+# TYPE docker_container_net_receive_bytes_total counter
+docker_container_net_receive_bytes_total{container_id="1bc4f77b45da7141bd451a12a61abd5c33b04276a3c06bb7a2b805d76eb0895e",hostname="arch-laptop"} 131827
+# HELP docker_container_net_receive_dropped_total Total number of receive packet drop
+# TYPE docker_container_net_receive_dropped_total counter
+docker_container_net_receive_dropped_total{container_id="1bc4f77b45da7141bd451a12a61abd5c33b04276a3c06bb7a2b805d76eb0895e",hostname="arch-laptop"} 0
+# HELP docker_container_net_receive_errors_total Total number of receive errors
+# TYPE docker_container_net_receive_errors_total counter
+docker_container_net_receive_errors_total{container_id="1bc4f77b45da7141bd451a12a61abd5c33b04276a3c06bb7a2b805d76eb0895e",hostname="arch-laptop"} 0
+# HELP docker_container_net_send_bytes_total Total number of bytes sent
+# TYPE docker_container_net_send_bytes_total counter
+docker_container_net_send_bytes_total{container_id="1bc4f77b45da7141bd451a12a61abd5c33b04276a3c06bb7a2b805d76eb0895e",hostname="arch-laptop"} 126
+# HELP docker_container_net_send_dropped_total Total number of send packet drop
+# TYPE docker_container_net_send_dropped_total counter
+docker_container_net_send_dropped_total{container_id="1bc4f77b45da7141bd451a12a61abd5c33b04276a3c06bb7a2b805d76eb0895e",hostname="arch-laptop"} 0
+# HELP docker_container_net_send_errors_total Total number of send errors
+# TYPE docker_container_net_send_errors_total counter
+docker_container_net_send_errors_total{container_id="1bc4f77b45da7141bd451a12a61abd5c33b04276a3c06bb7a2b805d76eb0895e",hostname="arch-laptop"} 0
+# HELP docker_container_pids Number of processes running in the container
+# TYPE docker_container_pids gauge
+docker_container_pids{container_id="1bc4f77b45da7141bd451a12a61abd5c33b04276a3c06bb7a2b805d76eb0895e",hostname="arch-laptop"} 18
+# HELP docker_container_ports Forwarded Ports
+# TYPE docker_container_ports gauge
+docker_container_ports{container_id="1bc4f77b45da7141bd451a12a61abd5c33b04276a3c06bb7a2b805d76eb0895e",hostname="arch-laptop",ip="0.0.0.0",private_port="8080",public_port="8080",type="tcp"} 1
+docker_container_ports{container_id="1bc4f77b45da7141bd451a12a61abd5c33b04276a3c06bb7a2b805d76eb0895e",hostname="arch-laptop",ip="::",private_port="8080",public_port="8080",type="tcp"} 1
+# HELP docker_container_restart_count Number of times the container has been restarted
+# TYPE docker_container_restart_count counter
+docker_container_restart_count{container_id="1bc4f77b45da7141bd451a12a61abd5c33b04276a3c06bb7a2b805d76eb0895e",hostname="arch-laptop"} 0
+# HELP docker_container_rootfs_size_bytes Size of rootfs in this container in bytes
+# TYPE docker_container_rootfs_size_bytes gauge
+docker_container_rootfs_size_bytes{container_id="1bc4f77b45da7141bd451a12a61abd5c33b04276a3c06bb7a2b805d76eb0895e",hostname="arch-laptop"} 7.30769752e+08
+# HELP docker_container_rw_size_bytes Size of files that have been created or changed by this container in bytes
+# TYPE docker_container_rw_size_bytes gauge
+docker_container_rw_size_bytes{container_id="1bc4f77b45da7141bd451a12a61abd5c33b04276a3c06bb7a2b805d76eb0895e",hostname="arch-laptop"} 0
+# HELP docker_container_started_seconds Timestamp in seconds when the container was started
+# TYPE docker_container_started_seconds gauge
+docker_container_started_seconds{container_id="1bc4f77b45da7141bd451a12a61abd5c33b04276a3c06bb7a2b805d76eb0895e",hostname="arch-laptop"} 1.771622693e+09
+# HELP docker_container_state Container State (0=created, 1=running, 2=paused, 3=restarting, 4=removing, 5=exited, 6=dead)
+# TYPE docker_container_state gauge
+docker_container_state{container_id="1bc4f77b45da7141bd451a12a61abd5c33b04276a3c06bb7a2b805d76eb0895e",hostname="arch-laptop"} 1
+# HELP docker_disk_usage_build_cache_reclaimable Information about Size of build on disk that can be reclaimed.
+# TYPE docker_disk_usage_build_cache_reclaimable gauge
+docker_disk_usage_build_cache_reclaimable{hostname="arch-laptop"} 2.136523696e+09
+# HELP docker_disk_usage_build_cache_total_size Information about Size of build cache on disk.
+# TYPE docker_disk_usage_build_cache_total_size gauge
+docker_disk_usage_build_cache_total_size{hostname="arch-laptop"} 2.219766813e+09
+# HELP docker_disk_usage_container_reclaimable Information about Size of containers on disk that can be reclaimed.
+# TYPE docker_disk_usage_container_reclaimable gauge
+docker_disk_usage_container_reclaimable{hostname="arch-laptop"} 0
+# HELP docker_disk_usage_container_total_size Information about Size of containers on disk.
+# TYPE docker_disk_usage_container_total_size gauge
+docker_disk_usage_container_total_size{hostname="arch-laptop"} 0
+# HELP docker_disk_usage_images_reclaimable Information about Size of images on disk that can be reclaimed.
+# TYPE docker_disk_usage_images_reclaimable gauge
+docker_disk_usage_images_reclaimable{hostname="arch-laptop"} 7.30769781e+08
+# HELP docker_disk_usage_images_total_size Information about Size of images on disk.
+# TYPE docker_disk_usage_images_total_size gauge
+docker_disk_usage_images_total_size{hostname="arch-laptop"} 8.89047521e+08
+# HELP docker_disk_usage_volumes_reclaimable Information about Size of volumes on disk that can be reclaimed.
+# TYPE docker_disk_usage_volumes_reclaimable gauge
+docker_disk_usage_volumes_reclaimable{hostname="arch-laptop"} 7.765450422e+09
+# HELP docker_disk_usage_volumes_total_size Information about Size of volumes on disk.
+# TYPE docker_disk_usage_volumes_total_size gauge
+docker_disk_usage_volumes_total_size{hostname="arch-laptop"} 7.765450422e+09
+# HELP docker_exporter_host_os_info Information about the host operating system
+# TYPE docker_exporter_host_os_info counter
+docker_exporter_host_os_info{hostname="arch-laptop",os_name="Arch",os_version="Unknown"} 1
+# HELP docker_exporter_info Information about the docker exporter
+# TYPE docker_exporter_info counter
+docker_exporter_info{hostname="arch-laptop",version="main"} 1
+```
 
 ### Running the exporter
 

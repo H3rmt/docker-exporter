@@ -13,7 +13,7 @@ func formatContainerInfo(ch chan<- prometheus.Metric, hostname string, container
 	for _, c := range containerInfo {
 		ch <- prometheus.MustNewConstMetric(
 			containerInfoDesc,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			1,
 			hostname,
 			c.ID,
@@ -30,7 +30,7 @@ func formatContainerNames(ch chan<- prometheus.Metric, hostname string, containe
 		for _, name := range c.Names {
 			ch <- prometheus.MustNewConstMetric(
 				containerNameDesc,
-				prometheus.GaugeValue,
+				prometheus.CounterValue,
 				1,
 				hostname,
 				c.ID,
