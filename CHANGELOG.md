@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.2](https://github.com/H3rmt/docker-exporter/compare/v1.4.1...v1.4.2) (2026-02-21)
+
+
+### Bug Fixes
+
+* rename docker disk usage metrics to have _bytes at end ([8c87636](https://github.com/H3rmt/docker-exporter/commit/8c876365bec73bc201c0507b32ed379741dc53be))
+
 ## [1.4.1](https://github.com/H3rmt/docker-exporter/compare/v1.4.0...v1.4.1) (2026-02-21)
 
 
