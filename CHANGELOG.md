@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.1](https://github.com/H3rmt/docker-exporter/compare/v1.4.0...v1.4.1) (2026-02-21)
+
+
+### Bug Fixes
+
+* use internal cache to speed up and improve cpu usage calculation ([c1097da](https://github.com/H3rmt/docker-exporter/commit/c1097da19351eccd39389c488f0d968fecacc31e))
+
 ## [1.4.0](https://github.com/H3rmt/docker-exporter/compare/v1.3.1...v1.4.0) (2026-02-21)
 
 
