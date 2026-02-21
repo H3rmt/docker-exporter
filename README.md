@@ -12,25 +12,25 @@ Grafana dashboard is available at [dashboard.json](./dashboard.json)
 
 ### Command-line options
 
-| Option                             | Description                                                | Default                       |
-|------------------------------------|------------------------------------------------------------|-------------------------------|
-| `--log.verbose`, `-v`              | Enable verbose mode (debug logs)                           | `false`                       |
-| `--log.quiet`, `-q`                | Enable quiet mode (disable info logs)                      | `false`                       |
-| `--log.trace`                      | Enable trace mode (very vebose logs)                       | `false`                       |
-| `--log.format`                     | Log format: 'logfmt' or 'json'                             | `logfmt`                      |
-| `--collector.internal-metrics`     | Enable internal go metrics                                 | `false`                       |
-| `--cache.size-cache-duration`      | Duration to wait before refreshing container size cache    | `300s`                        |
-| `--cache.disk-usage-cache-seconds` | Duration to wait before refreshing docker disk usage cache | `120s`                        |
-| `--web.homepage`                   | Show homepage with charts.                                 | `true`                        |
-| `--web.address`, `-a`              | Address to listen on                                       | `0.0.0.0`                     |
-| `--web.port`, `-p`                 | Port to listen on                                          | `9100`                        |
-| `--docker-host`, `-d`              | Host to connect to                                         | `unix:///var/run/docker.sock` |
-| `--collector.system`               | Enable system collector (exporter info, host OS info).     | `true`                        |
-| `--collector.container`            | Enable container collector.                                | `true`                        |
-| `--collector.container.net`        | Enable container network collector.                        | `true`                        |
-| `--collector.container.cpu`        | Enable container cpu usage collector.                      | `true`                        |
-| `--collector.container.fs`         | Enable container fs collector.                             | `true`                        |
-| `--collector.container.stats`      | Enable container stats collector.                          | `true`                        |
+| Option                              | Description                                                | Default                       |
+|-------------------------------------|------------------------------------------------------------|-------------------------------|
+| `--log.verbose`, `-v`               | Enable verbose mode (debug logs)                           | `false`                       |
+| `--log.quiet`, `-q`                 | Enable quiet mode (disable info logs)                      | `false`                       |
+| `--log.trace`                       | Enable trace mode (very vebose logs)                       | `false`                       |
+| `--log.format`                      | Log format: 'logfmt' or 'json'                             | `logfmt`                      |
+| `--collector.internal-metrics`      | Enable internal go metrics                                 | `false`                       |
+| `--cache.size-cache-duration`       | Duration to wait before refreshing container size cache    | `300s`                        |
+| `--cache.disk-usage-cache-duration` | Duration to wait before refreshing docker disk usage cache | `120s`                        |
+| `--web.homepage`                    | Show homepage with charts.                                 | `true`                        |
+| `--web.address`, `-a`               | Address to listen on                                       | `0.0.0.0`                     |
+| `--web.port`, `-p`                  | Port to listen on                                          | `9100`                        |
+| `--docker-host`, `-d`               | Host to connect to                                         | `unix:///var/run/docker.sock` |
+| `--collector.system`                | Enable system collector (exporter info, host OS info).     | `true`                        |
+| `--collector.container`             | Enable container collector.                                | `true`                        |
+| `--collector.container.net`         | Enable container network collector.                        | `true`                        |
+| `--collector.container.cpu`         | Enable container cpu usage collector.                      | `true`                        |
+| `--collector.container.fs`          | Enable container fs collector.                             | `true`                        |
+| `--collector.container.stats`       | Enable container stats collector.                          | `true`                        |
 
 ### Endpoints
 
@@ -50,57 +50,54 @@ Grafana dashboard is available at [dashboard.json](./dashboard.json)
 
 The exporter provides the following metrics:
 
-| Metric Name                                     | Description                                                                                  | Collector       | Type    | Labels                                                                    |
-|-------------------------------------------------|----------------------------------------------------------------------------------------------|-----------------|---------|---------------------------------------------------------------------------|
-| `docker_exporter_info`                          | Information about the docker exporter                                                        | system          | -       | `hostname`, `version`                                                     |
-| `docker_exporter_host_os_info`                  | Information about the host operating system                                                  | system          | -       | `hostname`, `os_name`, `os_version`                                       |
-| `docker_disk_usage_container_total_size`        | Information about Size of containers on disk.                                                | system          | Gauge   | `hostname`                                                                |
-| `docker_disk_usage_container_reclaimable`       | Information about Size of containers on disk that can be reclaimed.                          | system          | Gauge   | `hostname`                                                                |
-| `docker_disk_usage_images_total_size`           | Information about Size of images on disk.                                                    | system          | Gauge   | `hostname`                                                                |
-| `docker_disk_usage_images_reclaimable`          | Information about Size of images on disk that can be reclaimed.                              | system          | Gauge   | `hostname`                                                                |
-| `docker_disk_usage_build_cache_total_size`      | Information about Size of build cache on disk.                                               | system          | Gauge   | `hostname`                                                                |
-| `docker_disk_usage_build_cache_reclaimable`     | Information about Size of build on disk that can be reclaimed.                               | system          | Gauge   | `hostname`                                                                |
-| `docker_disk_usage_volumes_total_size`          | Information about Size of volumes on disk.                                                   | system          | Gauge   | `hostname`                                                                |
-| `docker_disk_usage_volumes_reclaimable`         | Information about Size of volumes on disk that can be reclaimed.                             | system          | Gauge   | `hostname`                                                                |
-| `docker_container_info`                         | Container information                                                                        | system          | -       | `hostname`, `container_id`, `name`, `image_id`, `command`, `network_mode` |
-| `docker_container_name`                         | Name for the container (can be more than one)                                                | container       | -       | `hostname`, `container_id`, `name`                                        |
-| `docker_container_state`                        | Container State (0=created, 1=running, 2=paused, 3=restarting, 4=removing, 5=exited, 6=dead) | container       | Gauge   | `hostname`, `container_id`                                                |
-| `docker_container_created_seconds`              | Timestamp in seconds when the container was created                                          | container       | Gauge   | `hostname`, `container_id`                                                |
-| `docker_container_started_seconds`              | Timestamp in seconds when the container was started                                          | container       | Gauge   | `hostname`, `container_id`                                                |
-| `docker_container_finished_at_seconds`          | Timestamp in seconds when the container finished                                             | container       | Gauge   | `hostname`, `container_id`                                                |
-| `docker_container_ports`                        | Forwarded Ports                                                                              | container       | -       | `hostname`, `container_id`, `public_port`, `private_port`, `ip`, `type`   |
-| `docker_container_exit_code`                    | Exit code of the container                                                                   | container       | Gauge   | `hostname`, `container_id`                                                |
-| `docker_container_restart_count`                | Number of times the container has been restarted                                             | container       | Counter | `hostname`, `container_id`                                                |
-| `docker_container_rootfs_size_bytes`            | Size of rootfs in this container in bytes                                                    | container.fs    | Gauge   | `hostname`, `container_id`                                                |
-| `docker_container_rw_size_bytes`                | Size of files that have been created or changed by this container in bytes                   | container.fs    | Gauge   | `hostname`, `container_id`                                                |
-| `docker_container_pids`                         | Number of processes running in the container                                                 | container.stats | Gauge   | `hostname`, `container_id`                                                |
-| `docker_container_cpu_user_nanoseconds_total`   | Time (in nanoseoconds) spent by tasks                                                        | container.stats | Counter | `hostname`, `container_id`                                                |
-| `docker_container_cpu_kernel_nanoseconds_total` | Time (in nanoseoconds) spent by tasks in user mode                                           | container.stats | Counter | `hostname`, `container_id`                                                |
-| `docker_container_cpu_nanoseconds_total`        | Time (in nanoseoconds) spent by tasks in kernel mode                                         | container.stats | Counter | `hostname`, `container_id`                                                |
-| `docker_container_cpu_percent`                  | Percentage of CPU used by the container (relative to max available CPU cores)                | container.stats | Gauge   | `hostname`, `container_id`                                                |
-| `docker_container_cpu_percent_host`             | Percentage of CPU used by the container (relative to host CPU cores)                         | container.stats | Gauge   | `hostname`, `container_id`                                                |
-| `docker_container_mem_limit_kib`                | Container memory limit in KiB                                                                | container.stats | Gauge   | `hostname`, `container_id`                                                |
-| `docker_container_mem_usage_kib`                | Container memory usage in KiB                                                                | container.stats | Gauge   | `hostname`, `container_id`                                                |
-| `docker_container_block_input_total`            | Total number of bytes read from disk                                                         | container.stats | Counter | `hostname`, `container_id`                                                |
-| `docker_container_block_output_total`           | Total number of bytes written to disk                                                        | container.stats | Counter | `hostname`, `container_id`                                                |
-| `docker_container_net_send_bytes_total`         | Total number of bytes sent                                                                   | container.net   | Counter | `hostname`, `container_id`                                                |
-| `docker_container_net_send_dropped_total`       | Total number of send packet drop                                                             | container.net   | Counter | `hostname`, `container_id`                                                |
-| `docker_container_net_send_errors_total`        | Total number of send errors                                                                  | container.net   | Counter | `hostname`, `container_id`                                                |
-| `docker_container_net_receive_bytes_total`      | Total number of bytes received                                                               | container.net   | Counter | `hostname`, `container_id`                                                |
-| `docker_container_net_receive_dropped_total`    | Total number of receive packet drop                                                          | container.net   | Counter | `hostname`, `container_id`                                                |
-| `docker_container_net_receive_errors_total`     | Total number of receive errors                                                               | container.net   | Counter | `hostname`, `container_id`                                                |
+| Metric Name                                       | Description                                                                                  | Collector       | Type    | Labels                                                                    |
+|---------------------------------------------------|----------------------------------------------------------------------------------------------|-----------------|---------|---------------------------------------------------------------------------|
+| `docker_exporter_info`                            | Information about the docker exporter                                                        | system          | -       | `hostname`, `version`                                                     |
+| `docker_exporter_host_os_info`                    | Information about the host operating system                                                  | system          | -       | `hostname`, `os_name`, `os_version`                                       |
+| `docker_disk_usage_container_total_size_bytes`    | Information about Size of containers on disk.                                                | system          | Gauge   | `hostname`                                                                |
+| `docker_disk_usage_container_reclaimable_bytes`   | Information about Size of containers on disk that can be reclaimed.                          | system          | Gauge   | `hostname`                                                                |
+| `docker_disk_usage_images_total_size_bytes`       | Information about Size of images on disk.                                                    | system          | Gauge   | `hostname`                                                                |
+| `docker_disk_usage_images_reclaimable_bytes`      | Information about Size of images on disk that can be reclaimed.                              | system          | Gauge   | `hostname`                                                                |
+| `docker_disk_usage_build_cache_total_size_bytes`  | Information about Size of build cache on disk.                                               | system          | Gauge   | `hostname`                                                                |
+| `docker_disk_usage_build_cache_reclaimable_bytes` | Information about Size of build on disk that can be reclaimed.                               | system          | Gauge   | `hostname`                                                                |
+| `docker_disk_usage_volumes_total_size_bytes`      | Information about Size of volumes on disk.                                                   | system          | Gauge   | `hostname`                                                                |
+| `docker_disk_usage_volumes_reclaimable_bytes`     | Information about Size of volumes on disk that can be reclaimed.                             | system          | Gauge   | `hostname`                                                                |
+| `docker_container_info`                           | Container information                                                                        | system          | -       | `hostname`, `container_id`, `name`, `image_id`, `command`, `network_mode` |
+| `docker_container_name`                           | Name for the container (can be more than one)                                                | container       | -       | `hostname`, `container_id`, `name`                                        |
+| `docker_container_state`                          | Container State (0=created, 1=running, 2=paused, 3=restarting, 4=removing, 5=exited, 6=dead) | container       | Gauge   | `hostname`, `container_id`                                                |
+| `docker_container_created_seconds`                | Timestamp in seconds when the container was created                                          | container       | Gauge   | `hostname`, `container_id`                                                |
+| `docker_container_started_seconds`                | Timestamp in seconds when the container was started                                          | container       | Gauge   | `hostname`, `container_id`                                                |
+| `docker_container_finished_at_seconds`            | Timestamp in seconds when the container finished                                             | container       | Gauge   | `hostname`, `container_id`                                                |
+| `docker_container_ports`                          | Forwarded Ports                                                                              | container       | -       | `hostname`, `container_id`, `public_port`, `private_port`, `ip`, `type`   |
+| `docker_container_exit_code`                      | Exit code of the container                                                                   | container       | Gauge   | `hostname`, `container_id`                                                |
+| `docker_container_restart_count`                  | Number of times the container has been restarted                                             | container       | Counter | `hostname`, `container_id`                                                |
+| `docker_container_rootfs_size_bytes`              | Size of rootfs in this container in bytes                                                    | container.fs    | Gauge   | `hostname`, `container_id`                                                |
+| `docker_container_rw_size_bytes`                  | Size of files that have been created or changed by this container in bytes                   | container.fs    | Gauge   | `hostname`, `container_id`                                                |
+| `docker_container_pids`                           | Number of processes running in the container                                                 | container.stats | Gauge   | `hostname`, `container_id`                                                |
+| `docker_container_cpu_user_nanoseconds_total`     | Time (in nanoseoconds) spent by tasks                                                        | container.stats | Counter | `hostname`, `container_id`                                                |
+| `docker_container_cpu_kernel_nanoseconds_total`   | Time (in nanoseoconds) spent by tasks in user mode                                           | container.stats | Counter | `hostname`, `container_id`                                                |
+| `docker_container_cpu_nanoseconds_total`          | Time (in nanoseoconds) spent by tasks in kernel mode                                         | container.stats | Counter | `hostname`, `container_id`                                                |
+| `docker_container_cpu_percent`                    | Percentage of CPU used by the container (relative to max available CPU cores)                | container.stats | Gauge   | `hostname`, `container_id`                                                |
+| `docker_container_cpu_percent_host`               | Percentage of CPU used by the container (relative to host CPU cores)                         | container.stats | Gauge   | `hostname`, `container_id`                                                |
+| `docker_container_mem_limit_kib`                  | Container memory limit in KiB                                                                | container.stats | Gauge   | `hostname`, `container_id`                                                |
+| `docker_container_mem_usage_kib`                  | Container memory usage in KiB                                                                | container.stats | Gauge   | `hostname`, `container_id`                                                |
+| `docker_container_block_input_total`              | Total number of bytes read from disk                                                         | container.stats | Counter | `hostname`, `container_id`                                                |
+| `docker_container_block_output_total`             | Total number of bytes written to disk                                                        | container.stats | Counter | `hostname`, `container_id`                                                |
+| `docker_container_net_send_bytes_total`           | Total number of bytes sent                                                                   | container.net   | Counter | `hostname`, `container_id`                                                |
+| `docker_container_net_send_dropped_total`         | Total number of send packet drop                                                             | container.net   | Counter | `hostname`, `container_id`                                                |
+| `docker_container_net_send_errors_total`          | Total number of send errors                                                                  | container.net   | Counter | `hostname`, `container_id`                                                |
+| `docker_container_net_receive_bytes_total`        | Total number of bytes received                                                               | container.net   | Counter | `hostname`, `container_id`                                                |
+| `docker_container_net_receive_dropped_total`      | Total number of receive packet drop                                                          | container.net   | Counter | `hostname`, `container_id`                                                |
+| `docker_container_net_receive_errors_total`       | Total number of receive errors                                                               | container.net   | Counter | `hostname`, `container_id`                                                |
 
 `docker_container_rootfs_size_bytes` and `docker_container_rw_size_bytes` are cached and only updated every 5 minutes.
 This can be customized with the `--cache.size-cache-seconds` flag.
 
-`docker_exporter_host_os_info` reads from `/etc/os-release` and is cached with a 5-minute TTL. This allows the exporter
-to detect OS version changes (e.g., after system updates) without requiring a container restart.
+`docker_container_cpu_percent` should probably be preferred over `docker_container_cpu_percent_host` as it takes the container's cgroup settings into account.
+(you can use `--cpus=3` to limit a container to only three cpu cores which this metric will report correctly)
 
-`docker_container_cpu_percent` should probably be preferred over `docker_container_cpu_percent_host` as it takes the
-container's cgroup settings into account. (you can use `--cpus=3` to limit a container to only three cpu cores which
-this metric will report correctly)
-
-`docker_disk_usage_*` are cached and only updated every 2 minutes. This can be customized with the `--cache.disk-usage-cache-seconds` flag.
+`docker_disk_usage_*` are cached and only updated every 2 minutes.
+This can be customized with the `--cache.disk-usage-cache-seconds` flag.
 
 ![dashboard_preview](.github/imgs/img_1.png)
 
@@ -111,12 +108,12 @@ The exporter uses structured logging with support for multiple output formats:
 - **logfmt** (default): Human-readable key-value format, compatible with log aggregation tools like Grafana Alloy
 - **json**: JSON-formatted logs for easy parsing and integration with log processing systems
 
-Logs include contextual information such as container IDs, error details, and operation metadata. Use `--verbose` to
-enable debug-level logs with additional details about container operations.
+Logs include contextual information such as container IDs, error details, and operation metadata. Use `--log.verbose` to
+enable debug-level logs with additional details about timing and container operations. Use `--log.trace` to debug indivial values.
 
 Example logfmt output:
 
-```
+```bash
 time=2025-12-18T17:12:19.779Z level=INFO msg="Starting Docker Prometheus exporter" version=dev uid=1001 gid=1001 docker_host=unix:///var/run/docker.sock
 ```
 
@@ -134,7 +131,7 @@ Example JSON output:
 }
 ```
 
-### Status endpoint
+### Status endpoint (/status)
 
 - Healthy
   ```json
@@ -253,28 +250,28 @@ docker_container_started_seconds{container_id="1bc4f77b45da7141bd451a12a61abd5c3
 docker_container_state{container_id="1bc4f77b45da7141bd451a12a61abd5c33b04276a3c06bb7a2b805d76eb0895e",hostname="arch-laptop"} 1
 # HELP docker_disk_usage_build_cache_reclaimable Information about Size of build on disk that can be reclaimed.
 # TYPE docker_disk_usage_build_cache_reclaimable gauge
-docker_disk_usage_build_cache_reclaimable{hostname="arch-laptop"} 2.136523696e+09
+docker_disk_usage_build_cache_reclaimable_bytes{hostname="arch-laptop"} 2.136523696e+09
 # HELP docker_disk_usage_build_cache_total_size Information about Size of build cache on disk.
 # TYPE docker_disk_usage_build_cache_total_size gauge
-docker_disk_usage_build_cache_total_size{hostname="arch-laptop"} 2.219766813e+09
+docker_disk_usage_build_cache_total_size_bytes{hostname="arch-laptop"} 2.219766813e+09
 # HELP docker_disk_usage_container_reclaimable Information about Size of containers on disk that can be reclaimed.
 # TYPE docker_disk_usage_container_reclaimable gauge
-docker_disk_usage_container_reclaimable{hostname="arch-laptop"} 0
+docker_disk_usage_container_reclaimable_bytes{hostname="arch-laptop"} 0
 # HELP docker_disk_usage_container_total_size Information about Size of containers on disk.
 # TYPE docker_disk_usage_container_total_size gauge
-docker_disk_usage_container_total_size{hostname="arch-laptop"} 0
+docker_disk_usage_container_total_size_bytes{hostname="arch-laptop"} 0
 # HELP docker_disk_usage_images_reclaimable Information about Size of images on disk that can be reclaimed.
 # TYPE docker_disk_usage_images_reclaimable gauge
-docker_disk_usage_images_reclaimable{hostname="arch-laptop"} 7.30769781e+08
+docker_disk_usage_images_reclaimable_bytes{hostname="arch-laptop"} 7.30769781e+08
 # HELP docker_disk_usage_images_total_size Information about Size of images on disk.
 # TYPE docker_disk_usage_images_total_size gauge
-docker_disk_usage_images_total_size{hostname="arch-laptop"} 8.89047521e+08
+docker_disk_usage_images_total_size_bytes{hostname="arch-laptop"} 8.89047521e+08
 # HELP docker_disk_usage_volumes_reclaimable Information about Size of volumes on disk that can be reclaimed.
 # TYPE docker_disk_usage_volumes_reclaimable gauge
-docker_disk_usage_volumes_reclaimable{hostname="arch-laptop"} 7.765450422e+09
+docker_disk_usage_volumes_reclaimable_bytes{hostname="arch-laptop"} 7.765450422e+09
 # HELP docker_disk_usage_volumes_total_size Information about Size of volumes on disk.
 # TYPE docker_disk_usage_volumes_total_size gauge
-docker_disk_usage_volumes_total_size{hostname="arch-laptop"} 7.765450422e+09
+docker_disk_usage_volumes_total_size_bytes{hostname="arch-laptop"} 7.765450422e+09
 # HELP docker_exporter_host_os_info Information about the host operating system
 # TYPE docker_exporter_host_os_info counter
 docker_exporter_host_os_info{hostname="arch-laptop",os_name="Arch",os_version="Unknown"} 1
@@ -322,7 +319,9 @@ services:
     container_name: docker_exporter
     restart: always
     environment:
+      # This uses the correct timezone for the initial data on the live charts
       - TZ="Europe/Berlin"
+      # Setting the IP env variable displays its value on the homepage
       - IP="10.10.10.10"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -332,7 +331,7 @@ services:
       - /proc/meminfo:/proc/meminfo:ro
     ports:
       - 9100:9100
-    command: [ "--cache.size-cache-seconds=600", "--log.format=json" ]
+    command: [ "--cache.size-cache-duration=600", "--log.format=json" ]
 ```
 
 ### Building from source
@@ -343,10 +342,8 @@ go build -o docker-exporter ./cmd/main.go
 
 ### Running in docker in lxc
 
-When running in docker in lxc mem and cpu metrics are either collected from the host or from the container depending on
-the container's cgroup settings.
-To collect metrics from the lxc container running the docker container a helper script is needed to access /proc/meminfo
-in the lxc.
+When running as a container inside docker, inside a lxc, mem and cpu metrics are either collected from the host or from the container depending on the container's cgroup settings.
+To collect metrics from the lxc container running docker and thus the docker container, a helper script is needed to access /proc/meminfo in the lxc.
 
 ```bash
 #!/usr/bin/env bash
@@ -378,7 +375,9 @@ services:
     container_name: docker_exporter
     restart: always
     environment:
+      # This uses the correct timezone for the initial data on the live charts
       - TZ="Europe/Berlin"
+      # Setting the IP env variable displays its value on the homepage
       - IP="10.10.10.10"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -389,5 +388,5 @@ services:
       - ./meminfo:/proc/meminfo:ro
     ports:
       - 9100:9100
-    command: [ "--cache.size-cache-seconds=600", "--collector.internal-metrics" ]
+    command: [ "--cache.size-cache-duration=600", "--collector.internal-metrics" ]
 ```

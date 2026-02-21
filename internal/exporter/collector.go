@@ -46,49 +46,49 @@ var (
 		nil,
 	)
 	dockerDiskUsageContainersTotalSize = prometheus.NewDesc(
-		"docker_disk_usage_container_total_size",
+		"docker_disk_usage_container_total_size_bytes",
 		"Information about Size of containers on disk.",
 		[]string{"hostname"},
 		nil,
 	)
 	dockerDiskUsageContainersReclaimable = prometheus.NewDesc(
-		"docker_disk_usage_container_reclaimable",
+		"docker_disk_usage_container_reclaimable_bytes",
 		"Information about Size of containers on disk that can be reclaimed.",
 		[]string{"hostname"},
 		nil,
 	)
 	dockerDiskUsageImagesTotalSize = prometheus.NewDesc(
-		"docker_disk_usage_images_total_size",
+		"docker_disk_usage_images_total_size_bytes",
 		"Information about Size of images on disk.",
 		[]string{"hostname"},
 		nil,
 	)
 	dockerDiskUsageImagesReclaimable = prometheus.NewDesc(
-		"docker_disk_usage_images_reclaimable",
+		"docker_disk_usage_images_reclaimable_bytes",
 		"Information about Size of images on disk that can be reclaimed.",
 		[]string{"hostname"},
 		nil,
 	)
 	dockerDiskUsageBuildCacheTotalSize = prometheus.NewDesc(
-		"docker_disk_usage_build_cache_total_size",
+		"docker_disk_usage_build_cache_total_size_bytes",
 		"Information about Size of build cache on disk.",
 		[]string{"hostname"},
 		nil,
 	)
 	dockerDiskUsageBuildCacheReclaimable = prometheus.NewDesc(
-		"docker_disk_usage_build_cache_reclaimable",
+		"docker_disk_usage_build_cache_reclaimable_bytes",
 		"Information about Size of build on disk that can be reclaimed.",
 		[]string{"hostname"},
 		nil,
 	)
 	dockerDiskUsageVolumesTotalSize = prometheus.NewDesc(
-		"docker_disk_usage_volumes_total_size",
+		"docker_disk_usage_volumes_total_size_bytes",
 		"Information about Size of volumes on disk.",
 		[]string{"hostname"},
 		nil,
 	)
 	dockerDiskUsageVolumesReclaimable = prometheus.NewDesc(
-		"docker_disk_usage_volumes_reclaimable",
+		"docker_disk_usage_volumes_reclaimable_bytes",
 		"Information about Size of volumes on disk that can be reclaimed.",
 		[]string{"hostname"},
 		nil,

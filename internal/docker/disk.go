@@ -28,7 +28,6 @@ func loadDiskUsageFunction(c *client.Client) func(ctx context.Context) (DiskUsag
 			Volumes:    true,
 			Verbose:    false,
 		})
-		log.GetLogger().Log(ctx, -3, "disk usage", "data", data)
 		if err != nil {
 			glob.SetError("DiskUsage", &err)
 			log.GetLogger().ErrorContext(ctx, "Failed to disk usage", "error", err)
@@ -50,7 +49,9 @@ func loadDiskUsageFunction(c *client.Client) func(ctx context.Context) (DiskUsag
 }
 
 func (c *Client) Disk(ctx context.Context) DiskUsage {
-	return c.diskUsageCache.GetValues(ctx)
+	data := c.diskUsageCache.GetValues(ctx)
+	log.GetLogger().Log(ctx, log.LevelTrace, "disk usage cache", "data", data)
+	return data
 }
 
 func (c *Client) disk(ctx context.Context) (DiskUsage, error) {
