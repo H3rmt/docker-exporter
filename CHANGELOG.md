@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.3](https://github.com/H3rmt/docker-exporter/compare/v1.4.2...v1.4.3) (2026-02-25)
+
+
+### Bug Fixes
+
+* fix concurrent map access for cpu cache ([897d14d](https://github.com/H3rmt/docker-exporter/commit/897d14df5488ee687ed7fa37bf40cde0012b27e5))
+
 ## [1.4.2](https://github.com/H3rmt/docker-exporter/compare/v1.4.1...v1.4.2) (2026-02-21)
 
 
