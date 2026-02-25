@@ -1,11 +1,14 @@
 package docker
 
 import (
+	"sync"
 	"time"
 
 	"github.com/h3rmt/docker-exporter/internal/glob"
 	"github.com/moby/moby/client"
 )
+
+// TODO add some kind of background removal of old container data
 
 type Client struct {
 	client *client.Client
@@ -16,6 +19,7 @@ type Client struct {
 	// disk usage cache for expensive DiskUsage
 	diskUsageCache Cache[DiskUsage]
 
+	cpuStatsRWMutex sync.RWMutex
 	// Cache to calculate cpu usage
 	cpuStatsCache map[string]cpuEntry // containerID -> sizes
 }

@@ -128,19 +128,26 @@ func (c *Client) getContainerStats(ctx context.Context, containerID string, cpu 
 
 	var data ContainerCpuStats
 	if cpu {
+		c.cpuStatsRWMutex.RLock()
+		prev := c.cpuStatsCache[containerID]
+		c.cpuStatsRWMutex.RUnlock()
+
 		data = ContainerCpuStats{
 			UsageNS:          rec.CpuStats.CpuUsage.TotalUsage,
 			UsageUserNS:      rec.CpuStats.CpuUsage.UsageInUsermode,
 			UsageKernelNS:    rec.CpuStats.CpuUsage.UsageInKernelmode,
-			PreUsageNS:       c.cpuStatsCache[containerID].UsageNS,
+			PreUsageNS:       prev.UsageNS,
 			SystemUsageNS:    rec.CpuStats.SystemCpuUsage,
-			PreSystemUsageNS: c.cpuStatsCache[containerID].SystemUsageNS,
+			PreSystemUsageNS: prev.SystemUsageNS,
 			OnlineCpus:       rec.CpuStats.OnlineCpus,
 		}
+
+		c.cpuStatsRWMutex.Lock()
 		c.cpuStatsCache[containerID] = cpuEntry{
 			UsageNS:       rec.CpuStats.CpuUsage.TotalUsage,
 			SystemUsageNS: rec.CpuStats.SystemCpuUsage,
 		}
+		c.cpuStatsRWMutex.Unlock()
 	}
 
 	// Network totals
