@@ -4,7 +4,7 @@ This project is similar to [prometheus-podman-exporter](https://github.com/conta
 It serves as a more lightweight alternative to Cadvisor, consuming approximately 20MB of RAM instead of 150–200MB.
 It exports Docker container metrics in Prometheus format and also provides a simple homepage with live charts for cpu and memory usage.
 
-Grafana dashboard is available at [dashboard.json](./dashboard.json)
+Grafana dashboards are available at [dashboards](grafana)
 
 ![dashboard_preview](.github/imgs/img.png)
 
@@ -31,6 +31,7 @@ Grafana dashboard is available at [dashboard.json](./dashboard.json)
 | `--collector.container.cpu`         | Enable container cpu usage collector.                      | `true`                        |
 | `--collector.container.fs`          | Enable container fs collector.                             | `true`                        |
 | `--collector.container.stats`       | Enable container stats collector.                          | `true`                        |
+| `--collector.images`                | Enable images collector.                                   | `true`                        |
 
 ### Endpoints
 
@@ -70,7 +71,7 @@ The exporter provides the following metrics:
 | `docker_container_finished_at_seconds`            | Timestamp in seconds when the container finished                                             | container       | Gauge   | `hostname`, `container_id`                                                |
 | `docker_container_ports`                          | Forwarded Ports                                                                              | container       | -       | `hostname`, `container_id`, `public_port`, `private_port`, `ip`, `type`   |
 | `docker_container_exit_code`                      | Exit code of the container                                                                   | container       | Gauge   | `hostname`, `container_id`                                                |
-| `docker_container_restart_count`                  | Number of times the container has been restarted                                             | container       | Counter | `hostname`, `container_id`                                                |
+| `docker_container_restart_count`                  | Number of times the container has been restarted                                             | container       | Gauge   | `hostname`, `container_id`                                                |
 | `docker_container_rootfs_size_bytes`              | Size of rootfs in this container in bytes                                                    | container.fs    | Gauge   | `hostname`, `container_id`                                                |
 | `docker_container_rw_size_bytes`                  | Size of files that have been created or changed by this container in bytes                   | container.fs    | Gauge   | `hostname`, `container_id`                                                |
 | `docker_container_pids`                           | Number of processes running in the container                                                 | container.stats | Gauge   | `hostname`, `container_id`                                                |
@@ -89,6 +90,9 @@ The exporter provides the following metrics:
 | `docker_container_net_receive_bytes_total`        | Total number of bytes received                                                               | container.net   | Counter | `hostname`, `container_id`                                                |
 | `docker_container_net_receive_dropped_total`      | Total number of receive packet drop                                                          | container.net   | Counter | `hostname`, `container_id`                                                |
 | `docker_container_net_receive_errors_total`       | Total number of receive errors                                                               | container.net   | Counter | `hostname`, `container_id`                                                |
+| `docker_image_created_seconds`                    | Timestamp in seconds when the image was created                                              | images          | Gauge   | `hostname`, `image_name`, `image_id`                                      |
+| `docker_image_containers`                         | Number of containers that use this image                                                     | images          | Gauge   | `hostname`, `image_name`, `image_id`                                      |
+| `docker_image_size_bytes`                         | Size of the image in bytes                                                                   | images          | Gauge   | `hostname`, `image_name`, `image_id`                                      |
 
 `docker_container_rootfs_size_bytes` and `docker_container_rw_size_bytes` are cached and only updated every 5 minutes.
 This can be customized with the `--cache.size-cache-seconds` flag.
@@ -188,7 +192,7 @@ docker_container_cpu_percent_host{container_id="1bc4f77b45da7141bd451a12a61abd5c
 # TYPE docker_container_cpu_user_nanoseconds_total counter
 docker_container_cpu_user_nanoseconds_total{container_id="1bc4f77b45da7141bd451a12a61abd5c33b04276a3c06bb7a2b805d76eb0895e",hostname="arch-laptop"} 2.18999e+08
 # HELP docker_container_created_seconds Timestamp in seconds when the container was created
-# TYPE docker_container_created_seconds counter
+# TYPE docker_container_created_seconds gauge
 docker_container_created_seconds{container_id="1bc4f77b45da7141bd451a12a61abd5c33b04276a3c06bb7a2b805d76eb0895e",hostname="arch-laptop"} 1.770042164e+09
 # HELP docker_container_exit_code Exit code of the container
 # TYPE docker_container_exit_code gauge
@@ -197,7 +201,7 @@ docker_container_exit_code{container_id="1bc4f77b45da7141bd451a12a61abd5c33b0427
 # TYPE docker_container_finished_at_seconds gauge
 docker_container_finished_at_seconds{container_id="1bc4f77b45da7141bd451a12a61abd5c33b04276a3c06bb7a2b805d76eb0895e",hostname="arch-laptop"} 1.771622617e+09
 # HELP docker_container_info Container information
-# TYPE docker_container_info counter
+# TYPE docker_container_info gauge
 docker_container_info{command="/bin/tini -- /docker-entry.sh /server",container_id="1bc4f77b45da7141bd451a12a61abd5c33b04276a3c06bb7a2b805d76eb0895e",hostname="arch-laptop",image_id="sha256:f5df598812f3425efeeebf026c66646042295eacd571de865632108c28a860f9",name="server-esp32-timelapse-server-1",network_mode="server_default"} 1
 # HELP docker_container_mem_limit_kib Container memory limit in KiB
 # TYPE docker_container_mem_limit_kib gauge
@@ -206,7 +210,7 @@ docker_container_mem_limit_kib{container_id="1bc4f77b45da7141bd451a12a61abd5c33b
 # TYPE docker_container_mem_usage_kib gauge
 docker_container_mem_usage_kib{container_id="1bc4f77b45da7141bd451a12a61abd5c33b04276a3c06bb7a2b805d76eb0895e",hostname="arch-laptop"} 194852
 # HELP docker_container_name Name for the container (can be more than one)
-# TYPE docker_container_name counter
+# TYPE docker_container_name gauge
 docker_container_name{container_id="1bc4f77b45da7141bd451a12a61abd5c33b04276a3c06bb7a2b805d76eb0895e",hostname="arch-laptop",name="server-esp32-timelapse-server-1"} 1
 # HELP docker_container_net_receive_bytes_total Total number of bytes received
 # TYPE docker_container_net_receive_bytes_total counter
@@ -234,7 +238,7 @@ docker_container_pids{container_id="1bc4f77b45da7141bd451a12a61abd5c33b04276a3c0
 docker_container_ports{container_id="1bc4f77b45da7141bd451a12a61abd5c33b04276a3c06bb7a2b805d76eb0895e",hostname="arch-laptop",ip="0.0.0.0",private_port="8080",public_port="8080",type="tcp"} 1
 docker_container_ports{container_id="1bc4f77b45da7141bd451a12a61abd5c33b04276a3c06bb7a2b805d76eb0895e",hostname="arch-laptop",ip="::",private_port="8080",public_port="8080",type="tcp"} 1
 # HELP docker_container_restart_count Number of times the container has been restarted
-# TYPE docker_container_restart_count counter
+# TYPE docker_container_restart_count gauge
 docker_container_restart_count{container_id="1bc4f77b45da7141bd451a12a61abd5c33b04276a3c06bb7a2b805d76eb0895e",hostname="arch-laptop"} 0
 # HELP docker_container_rootfs_size_bytes Size of rootfs in this container in bytes
 # TYPE docker_container_rootfs_size_bytes gauge
@@ -273,11 +277,23 @@ docker_disk_usage_volumes_reclaimable_bytes{hostname="arch-laptop"} 7.765450422e
 # TYPE docker_disk_usage_volumes_total_size gauge
 docker_disk_usage_volumes_total_size_bytes{hostname="arch-laptop"} 7.765450422e+09
 # HELP docker_exporter_host_os_info Information about the host operating system
-# TYPE docker_exporter_host_os_info counter
+# TYPE docker_exporter_host_os_info gauge
 docker_exporter_host_os_info{hostname="arch-laptop",os_name="Arch",os_version="Unknown"} 1
 # HELP docker_exporter_info Information about the docker exporter
-# TYPE docker_exporter_info counter
+# TYPE docker_exporter_info gauge
 docker_exporter_info{hostname="arch-laptop",version="main"} 1
+# HELP docker_image_containers Number of containers that use this image
+# TYPE docker_image_containers gauge
+docker_image_containers{hostname="arch-laptop",image_id="sha256:f5df598812f3425efeeebf026c66646042295eacd571de865632108c28a860f9",image_name="server-esp32-timelapse-server:latest"} 1
+docker_image_containers{hostname="arch-laptop",image_id="sha256:fd6ff83de3cd6d488e530121df47382529a583e9fa7b70fa558fd5ae41996745",image_name="docker-exporter:latest"} 0
+# HELP docker_image_created_seconds Timestamp in seconds when the image was created
+# TYPE docker_image_created_seconds gauge
+docker_image_created_seconds{hostname="arch-laptop",image_id="sha256:f5df598812f3425efeeebf026c66646042295eacd571de865632108c28a860f9",image_name="server-esp32-timelapse-server:latest"} 1.770042163e+09
+docker_image_created_seconds{hostname="arch-laptop",image_id="sha256:fd6ff83de3cd6d488e530121df47382529a583e9fa7b70fa558fd5ae41996745",image_name="docker-exporter:latest"} 1.771627988e+09
+# HELP docker_image_size_bytes Size of the image in bytes
+# TYPE docker_image_size_bytes gauge
+docker_image_size_bytes{hostname="arch-laptop",image_id="sha256:f5df598812f3425efeeebf026c66646042295eacd571de865632108c28a860f9",image_name="server-esp32-timelapse-server:latest"} 7.30769752e+08
+docker_image_size_bytes{hostname="arch-laptop",image_id="sha256:fd6ff83de3cd6d488e530121df47382529a583e9fa7b70fa558fd5ae41996745",image_name="docker-exporter:latest"} 2.0811107e+07
 ```
 
 ### Running the exporter
@@ -388,5 +404,5 @@ services:
       - ./meminfo:/proc/meminfo:ro
     ports:
       - 9100:9100
-    command: [ "--cache.size-cache-duration=600", "--collector.internal-metrics" ]
+    command: [ "--cache.size-cache-duration=600", "--collector.internal-metrics", "--collector.images=false" ]
 ```

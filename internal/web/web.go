@@ -13,30 +13,61 @@ import _ "embed"
 //go:embed assets/chart.umd.min.js
 var chartJs []byte
 
-func HandleChartJs() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
-		_, _ = w.Write(chartJs)
-	}
-}
+//go:embed assets/popper.min.js
+var popperJs []byte
+
+//go:embed assets/tippy.js
+var tippyJs []byte
+
+//go:embed assets/tippy.animations.perspective.css
+var tippyPerspectiveCss []byte
+
+//go:embed assets/tippy.themes.translucent.css
+var tippTranslucentCss []byte
 
 //go:embed assets/main.css
 var css []byte
 
-func HandleCss() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/css; charset=utf-8")
-		_, _ = w.Write(css)
-	}
-}
-
 //go:embed assets/main.js
 var js []byte
 
-func HandleJs() http.HandlerFunc {
+var assetMap = map[string][]byte{
+	"main.css":                         css,
+	"main.js":                          js,
+	"popper.min.js":                    popperJs,
+	"tippy.min.js":                     tippyJs,
+	"tippy.animations.perspective.css": tippyPerspectiveCss,
+	"tippy.themes.translucent.css":     tippTranslucentCss,
+	"chart.umd.min.js":                 chartJs,
+}
+
+var contentTypeMap = map[string]string{
+	".js":  "application/javascript; charset=utf-8",
+	".css": "text/css; charset=utf-8",
+}
+
+func HandleAsset() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
-		_, _ = w.Write(js)
+		path := r.PathValue("path")
+
+		asset, ok := assetMap[path]
+		if !ok {
+			w.WriteHeader(http.StatusNotFound)
+			_, _ = w.Write([]byte("404 page not found\n"))
+			return
+		}
+
+		contentType := "application/octet-stream"
+		for ext, ct := range contentTypeMap {
+			if len(path) >= len(ext) && path[len(path)-len(ext):] == ext {
+				contentType = ct
+				break
+			}
+		}
+
+		w.Header().Set("Content-Type", contentType)
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(asset)
 	}
 }
 

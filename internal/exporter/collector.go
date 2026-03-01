@@ -23,6 +23,7 @@ type CollectorConfig struct {
 	ContainerCPU     bool
 	ContainerFS      bool
 	ContainerStats   bool
+	Images           bool
 }
 
 // DockerCollector implements the prometheus.Collector interface
@@ -255,6 +256,24 @@ var (
 		[]string{"hostname", "container_id"},
 		nil,
 	)
+	imageCreated = prometheus.NewDesc(
+		"docker_image_created_seconds",
+		"Timestamp in seconds when the image was created",
+		[]string{"hostname", "image_name", "image_id"},
+		nil,
+	)
+	imageContainers = prometheus.NewDesc(
+		"docker_image_containers",
+		"Number of containers that use this image",
+		[]string{"hostname", "image_name", "image_id"},
+		nil,
+	)
+	imageSize = prometheus.NewDesc(
+		"docker_image_size_bytes",
+		"Size of the image in bytes",
+		[]string{"hostname", "image_name", "image_id"},
+		nil,
+	)
 )
 
 func NewDockerCollector(client *docker.Client, version string, config CollectorConfig) *DockerCollector {
@@ -335,18 +354,45 @@ func (c *DockerCollector) Collect(ch chan<- prometheus.Metric) {
 	hostname := getHostname(ctx)
 
 	if c.config.System {
-		formatSystemInfo(ch, hostname, c.version)
-		osInfo := osinfo.GetOSInfo(ctx)
-		formatSystemHostInfo(ch, hostname, osInfo)
-		disk := c.dockerClient.Disk(ctx)
-		formatSystemDiskInfo(ch, hostname, disk)
+		c.collectSystem(ctx, ch, hostname)
+		log.GetLogger().DebugContext(ctx, "Finished collecting system metrics", "time", time.Since(start))
 	}
-	log.GetLogger().DebugContext(ctx, "Finished collecting system metrics", "time", time.Since(start))
 
-	if !c.config.Container {
+	if c.config.Container {
+		c.collectContainers(ctx, ch, hostname, start)
+		log.GetLogger().DebugContext(ctx, "Finished collecting container metrics", "time", time.Since(start))
+	}
+
+	if c.config.Images {
+		c.collectImages(ctx, ch, hostname)
+		log.GetLogger().DebugContext(ctx, "Finished collecting images metrics", "time", time.Since(start))
+	}
+
+	log.GetLogger().DebugContext(ctx, "Finished collecting metrics", "time", time.Since(start))
+}
+
+func (c *DockerCollector) collectSystem(ctx context.Context, ch chan<- prometheus.Metric, hostname string) {
+	formatSystemInfo(ch, hostname, c.version)
+	osInfo := osinfo.GetOSInfo(ctx)
+	formatSystemHostInfo(ch, hostname, osInfo)
+	disk := c.dockerClient.Disk(ctx)
+	formatSystemDiskInfo(ch, hostname, disk)
+}
+
+func (c *DockerCollector) collectImages(ctx context.Context, ch chan<- prometheus.Metric, hostname string) {
+	images, err := c.dockerClient.ListAllImages(ctx)
+	if err != nil {
+		log.GetLogger().ErrorContext(ctx, "Failed to list images", "error", err)
 		return
 	}
+	for _, image := range images {
+		formatImageInfoCreated(ch, hostname, image)
+		formatImageInfoContainers(ch, hostname, image)
+		formatImageInfoSize(ch, hostname, image)
+	}
+}
 
+func (c *DockerCollector) collectContainers(ctx context.Context, ch chan<- prometheus.Metric, hostname string, start time.Time) {
 	containerInfo, err := c.dockerClient.ListAllRunningContainers(ctx)
 	if err != nil {
 		log.GetLogger().ErrorContext(ctx, "Failed to list running containers", "error", err)
@@ -434,8 +480,6 @@ func (c *DockerCollector) Collect(ch chan<- prometheus.Metric) {
 			formatContainerNetRecvErrors(ch, hostname, result.id, result.stat)
 		}
 	}
-
-	log.GetLogger().DebugContext(ctx, "Finished collecting metrics", "time", time.Since(start))
 }
 
 func RegisterCollectorsWithRegistry(cli *docker.Client, reg *prometheus.Registry, version string, config CollectorConfig) {

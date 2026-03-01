@@ -17,8 +17,8 @@ type Response struct {
 	Version       string            `json:"version"`
 }
 
-func HandleStatus(cli *docker.Client, version string) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func HandleStatus(cli *docker.Client, version string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		w.Header().Set("Content-Type", "application/json")
 
@@ -69,5 +69,5 @@ func HandleStatus(cli *docker.Client, version string) http.Handler {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-	})
+	}
 }

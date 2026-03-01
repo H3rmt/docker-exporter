@@ -1,5 +1,5 @@
 .github
-dashboard.json
+grafana/detailed.json
 renovate.json
 CHANGELOG.md
 tmp

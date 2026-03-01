@@ -43,6 +43,7 @@ var (
 	collectorContainerCPU     bool
 	collectorContainerFS      bool
 	collectorContainerStats   bool
+	collectorImages           bool
 )
 
 var rootCmd = &cobra.Command{
@@ -79,6 +80,7 @@ func init() {
 	rootCmd.Flags().BoolVar(&collectorContainerCPU, "collector.container.cpu", true, "Enable container cpu usage collector.")
 	rootCmd.Flags().BoolVar(&collectorContainerFS, "collector.container.fs", true, "Enable container fs collector.")
 	rootCmd.Flags().BoolVar(&collectorContainerStats, "collector.container.stats", true, "Enable container stats collector.")
+	rootCmd.Flags().BoolVar(&collectorImages, "collector.images", true, "Enable images collector.")
 }
 
 var (
@@ -121,6 +123,7 @@ func run(*cobra.Command, []string) {
 		ContainerCPU:     collectorContainerCPU,
 		ContainerFS:      collectorContainerFS,
 		ContainerStats:   collectorContainerStats,
+		Images:           collectorImages,
 	}
 	var reg prometheus.Gatherer
 	if internalMetrics {
@@ -203,13 +206,13 @@ func run(*cobra.Command, []string) {
 }
 
 func registerHttp(dockerClient *docker.Client, reg prometheus.Gatherer) {
-	http.Handle("/status", status.HandleStatus(dockerClient, Version))
+	http.HandleFunc("/status", status.HandleStatus(dockerClient, Version))
 
 	// Wrapper for /metrics that returns 503 when not ready
 	metricsHandler := promhttp.HandlerFor(reg, promhttp.HandlerOpts{
 		EnableOpenMetrics: trace,
 	})
-	http.Handle("/metrics", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
 		if !glob.IsReady() {
 			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 			w.WriteHeader(http.StatusServiceUnavailable)
@@ -217,18 +220,17 @@ func registerHttp(dockerClient *docker.Client, reg prometheus.Gatherer) {
 			return
 		}
 		metricsHandler.ServeHTTP(w, r)
-	}))
+	})
 
 	// Web UI and API
 	if homepage {
 		http.HandleFunc("/", web.HandleRoot())
-		http.HandleFunc("/main.css", web.HandleCss())
-		http.HandleFunc("/main.js", web.HandleJs())
-		http.HandleFunc("/chart.umd.min.js", web.HandleChartJs())
+		http.HandleFunc("/{path}", web.HandleAsset())
 
 		http.HandleFunc("/api/info", web.HandleAPIInfo(Version))
 		http.HandleFunc("/api/usage", web.HandleAPIUsage())
-		http.Handle("/api/containers", web.HandleAPIContainers(dockerClient))
+		http.HandleFunc("/api/containers", web.HandleAPIContainers(dockerClient))
+		http.HandleFunc("/api/images", web.HandleApiImages(dockerClient))
 
 		go func() {
 			web.CollectInBg()

@@ -48,7 +48,7 @@ func formatContainerSizeRw(ch chan<- prometheus.Metric, hostname string, contain
 func formatContainerRestartCount(ch chan<- prometheus.Metric, hostname string, containerID string, inspect docker.ContainerInspect) {
 	ch <- prometheus.MustNewConstMetric(
 		containerRestartCountDesc,
-		prometheus.CounterValue,
+		prometheus.GaugeValue,
 		float64(inspect.RestartCount),
 		hostname,
 		containerID,

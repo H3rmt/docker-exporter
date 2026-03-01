@@ -71,6 +71,7 @@ func HandleAPIUsage() http.HandlerFunc {
 
 type containerItem struct {
 	ID              string   `json:"id"`
+	ImageId         string   `json:"image_id"`
 	Names           []string `json:"names"`
 	Created         int64    `json:"created"`
 	State           string   `json:"state"`
@@ -85,8 +86,8 @@ type containerItem struct {
 	MaxLimitedCpus  float64  `json:"max_limited_cpus"`
 }
 
-func HandleAPIContainers(cli *docker.Client) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func HandleAPIContainers(c *docker.Client) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		log.GetLogger().Log(ctx, log.LevelTrace, "handle api containers")
 
@@ -97,7 +98,7 @@ func HandleAPIContainers(cli *docker.Client) http.Handler {
 		}
 
 		var items []containerItem
-		containers, err := cli.ListAllRunningContainers(ctx)
+		containers, err := c.ListAllRunningContainers(ctx)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -107,16 +108,16 @@ func HandleAPIContainers(cli *docker.Client) http.Handler {
 		var mu sync.Mutex
 		items = make([]containerItem, 0, len(containers))
 
-		for _, c := range containers {
+		for _, cnt := range containers {
 			wg.Add(1)
-			go func(c docker.ContainerInfo) {
+			go func(ci docker.ContainerInfo) {
 				defer wg.Done()
 
 				// inspect for exit code
 				var exitCode int
 				var restartCount int
 				var nanoCpus int64
-				if insp, err := cli.InspectContainer(ctx, c.ID, false); err == nil {
+				if insp, err := c.InspectContainer(ctx, ci.ID, false); err == nil {
 					exitCode = insp.ExitCode
 					restartCount = insp.RestartCount
 					nanoCpus = insp.NanoCpus
@@ -129,8 +130,8 @@ func HandleAPIContainers(cli *docker.Client) http.Handler {
 				var maxCPUs float64
 				var maxLimitedCpus float64
 				var cpuLimitedUsage uint64
-				if c.State == container.StateRunning {
-					if st, err := cli.GetContainerStats(ctx, c.ID, true); err == nil {
+				if ci.State == container.StateRunning {
+					if st, err := c.GetContainerStats(ctx, ci.ID, true); err == nil {
 						memKiB = st.MemoryUsageKiB
 						memLimitKiB = st.MemoryLimitKiB
 
@@ -149,11 +150,12 @@ func HandleAPIContainers(cli *docker.Client) http.Handler {
 						cpuLimitedUsage = uint64((float64(cpuPercentOfSystem) / maxLimitedCpus) * maxCPUs)
 					}
 				}
-				stateStr := string(c.State)
+				stateStr := string(ci.State)
 				item := containerItem{
-					ID:              c.ID,
-					Names:           c.Names,
-					Created:         c.Created,
+					ID:              ci.ID,
+					ImageId:         ci.ImageID,
+					Names:           ci.Names,
+					Created:         ci.Created,
 					State:           stateStr,
 					Exited:          strings.ToLower(stateStr) == "exited",
 					ExitCode:        exitCode,
@@ -169,13 +171,42 @@ func HandleAPIContainers(cli *docker.Client) http.Handler {
 				mu.Lock()
 				items = append(items, item)
 				mu.Unlock()
-			}(c)
+			}(cnt)
 		}
 		log.GetLogger().Log(ctx, log.LevelTrace, "waiting for container stats", "containers", len(containers))
 		wg.Wait()
 		log.GetLogger().Log(ctx, log.LevelTrace, "done waiting for container stats")
 		writeJSON(w, items)
-	})
+	}
+}
+
+type imageItem struct {
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	Size    int64  `json:"size"`
+	Created int64  `json:"created"`
+}
+
+func HandleApiImages(c *docker.Client) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		log.GetLogger().Log(ctx, log.LevelTrace, "handle api images")
+		images, err := c.ListAllImages(ctx)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		i := make([]imageItem, len(images))
+		for idx, img := range images {
+			i[idx] = imageItem{
+				ID:      img.ID,
+				Size:    img.Size,
+				Created: img.Created,
+				Name:    img.Name,
+			}
+		}
+		writeJSON(w, i)
+	}
 }
 
 // Helpers

@@ -32,39 +32,80 @@ function fmtBytesKiB(kib) {
     return v.toFixed(1) + ' ' + units[u];
 }
 
+function fmtBytes(bytes) {
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    let u = 0
+    while (bytes >= 1000 && u < units.length - 1) {
+        bytes /= 1000;
+        u++;
+    }
+    return bytes.toFixed(1) + ' ' + units[u];
+}
+
 function fmtTime(ts) {
     if (!ts) return '-';
     const d = new Date(ts * 1000);
     return d.toLocaleString();
 }
 
+let tooltipInstances = []
+
+function updateTooltips() {
+    let items = Array.from(document.querySelectorAll('[data-tippy-content]'));
+    // update existing tooltips
+    for (const instance of tooltipInstances) {
+        if (items.includes(instance.reference)) {
+            // diff content
+            const newContent = instance.reference.getAttribute("data-tippy-content");
+            if (newContent !== instance.props.content) {
+                instance.setContent(newContent);
+            }
+            items = items.filter(i => i !== instance.reference);
+        }
+    }
+    // add new tooltips
+    let newTooltipInstances = tippy(items, {
+        delay: 50,
+        arrow: true,
+        allowHTML: true,
+        interactive: true,
+        maxWidth: 'none',
+        duration: [100, 200],
+        animation: "perspective",
+        theme: "translucent",
+    });
+    tooltipInstances = tooltipInstances.filter((i) => document.body.contains(i.reference)).concat(newTooltipInstances);
+}
+
 async function checkStatus() {
     try {
-        /** @type { {status: string, version: string, docker_version?: string, docker_error?: string, errors?: Object<string, string> } } */
+        /** @type { {status: string, version: string, dockerVersion?: string, dockerError?: string, errors?: Object<string, string> } } */
         const status = await fetchJSON('/status', true);
         const badge = document.getElementById('status_badge');
+        let statusBool = false;
 
         if (status.status === 'starting') {
             badge.className = 'status-badge status-starting';
             badge.textContent = 'Starting...';
-            badge.style.display = 'inline-block';
-            return false;
+            badge.setAttribute("data-tippy-content", "<b>Docker version: </b>" + status.dockerVersion);
+            statusBool = false;
         } else if (status.status === 'healthy') {
             badge.className = 'status-badge status-healthy';
             badge.textContent = 'Healthy';
-            badge.style.display = 'inline-block';
-            return true;
+            badge.setAttribute("data-tippy-content", "<b>Docker version: </b>" + status.dockerVersion);
+            statusBool = true;
         } else if (status.status === 'unhealthy') {
             badge.className = 'status-badge status-unhealthy';
             badge.textContent = 'Unhealthy';
-            badge.style.display = 'inline-block';
             if (status.errors) {
-                badge.title = [...Object.entries(status.errors).map(([k, v]) => `${k}: ${v}`),].join('\n');
+                badge.setAttribute("data-tippy-content", [...Object.entries(status.errors).map(([k, v]) => `<b>${k}:</b> ${v}`)].join('<br>'));
             } else {
-                badge.title = status.docker_error || '';
+                badge.setAttribute("data-tippy-content", status.dockerError || '');
             }
-            return false;
+            statusBool = false;
         }
+        updateTooltips()
+        return statusBool;
     } catch (e) {
         console.error('Status check failed:', e);
         const badge = document.getElementById('status_badge');
@@ -222,17 +263,17 @@ async function loadContainers() {
             '<animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="1s" repeatCount="indefinite"/>' +
             '</circle></svg>' +
             '<span style="vertical-align:middle;">Loading containers...</span>';
+        await new Promise(resolve => setTimeout(resolve, 100));
         /** @type { {
-         *   exited: boolean, names: string[],
+         *   exited: boolean, names: string[], image_id: string,
          *   id: string, created: number, mem_usage_kib: number,
          *   mem_limit_kib: number, state: string,
          *   exit_code: number, restart_count: number,
          *   cpu_usage: number, max_cpus: number,
          *   max_limited_cpus: number, cpu_limited_usage: number
-         * }[] } */
-        await new Promise(resolve => setTimeout(resolve, 100));
-        let list = await fetchJSON('/api/containers');
-        list.sort((a, b) => {
+         * }[] }*/
+        let container = await fetchJSON('/api/containers');
+        container.sort((a, b) => {
             const exitA = a.exited ? a.exit_code : -1;
             const exitB = b.exited ? b.exit_code : -1;
             if (exitA !== exitB) {
@@ -240,10 +281,14 @@ async function loadContainers() {
             }
             return a.created - b.created;
         });
-        loading.innerHTML = "";
+        /** @type { {
+         *   id: string, name: string, size: string, created: number
+         * }[] }*/
+        let images = await fetchJSON('/api/images');
+
         tbody.innerHTML = "";
-        document.getElementById('container_count').innerText = " (" + list.length + ")";
-        for (const c of list) {
+        document.getElementById('container_count').innerText = " (" + container.length + ")";
+        for (const c of container) {
             const tr = document.createElement('tr');
             const stateClass = c.exited ? 'exited' : 'running';
 
@@ -254,27 +299,54 @@ async function loadContainers() {
 
             // ID column
             const tdId = document.createElement('td');
-            const code = document.createElement('code');
-            code.title = c.id + '\n';
-            code.classList.add('underline');
-            code.innerText = c.id.substring(0, 12);
-            tdId.appendChild(code);
+            const IdCode = document.createElement('code');
+            IdCode.setAttribute("data-tippy-content", c.id)
+            IdCode.classList.add('underline');
+            IdCode.innerText = c.id.substring(0, 12);
+            tdId.appendChild(IdCode);
             tr.appendChild(tdId);
+
+            // Image ID column
+            const tdImageId = document.createElement('td');
+            const ImageCode = document.createElement('code');
+            ImageCode.classList.add('underline');
+            const image = images.find(i => i.id === c.image_id);
+            if (image) {
+                ImageCode.innerText = image.name.split(":")[0];
+                ImageCode.setAttribute("data-tippy-content",
+                    "<b>Name: </b>" + image.name + "<br>" +
+                    "<b>Size: </b>" + fmtBytes(image.size) + "<br>" +
+                    "<b>Created: </b>" + fmtTime(image.created) + "<br>" +
+                    "<b>ID: </b>" + c.image_id.substring(0, 30) + "..."
+                )
+            } else {
+                ImageCode.innerText = "?" + c.image_id.substring(0, 20) + "?"
+            }
+            tdImageId.appendChild(ImageCode);
+            tr.appendChild(tdImageId);
 
             // CPU column
             const tdCpu = document.createElement('td');
+            const tdCpuSpan = document.createElement('span');
             if (c.max_cpus) {
-                tdCpu.classList.add('underline');
-                tdCpu.innerText = (c.cpu_usage * c.max_cpus) + '% / ' + (c.max_limited_cpus * 100) + '%' + '  (' + c.cpu_limited_usage + '%)';
-                tdCpu.title = (c.cpu_usage * c.max_cpus) + '% / ' + (c.max_cpus * 100) + '%' + '  (' + c.cpu_usage + '%)';
+                tdCpuSpan.classList.add('underline');
+                tdCpuSpan.setAttribute("data-tippy-content",
+                    "<b>Cpu with Limits: </b>" + (c.cpu_usage * c.max_cpus) + '% / ' + (c.max_limited_cpus * 100) + '%' + '  (' + c.cpu_limited_usage + '%)' + "<br>" +
+                    "<b>Cpu without Limits: </b>" + (c.cpu_usage * c.max_cpus) + '% / ' + (c.max_cpus * 100) + '%' + '  (' + c.cpu_usage + '%)'
+                )
+                tdCpuSpan.innerText = c.cpu_limited_usage + "%"
             } else {
-                tdCpu.innerText = '-';
+                tdCpuSpan.innerText = '-';
             }
+            tdCpu.appendChild(tdCpuSpan);
             tr.appendChild(tdCpu);
 
             // Created column
             const tdCreated = document.createElement('td');
-            tdCreated.classList.add('underline');
+            const tdCreatedSpan = document.createElement('span');
+            tdCreatedSpan.classList.add('underline');
+            tdCreatedSpan.innerText = fmtTime(c.created);
+
             const now = Date.now();
             const createdMs = c.created * 1000;
             const diffMs = now - createdMs;
@@ -294,8 +366,8 @@ async function loadContainers() {
                 durationStr = diffSec + 's';
             }
 
-            tdCreated.innerText = fmtTime(c.created);
-            tdCreated.title = durationStr + " Ago"
+            tdCreatedSpan.setAttribute("data-tippy-content", "<b>Created: </b>" + durationStr + " Ago")
+            tdCreated.appendChild(tdCreatedSpan);
             tr.appendChild(tdCreated);
 
             // Memory usage column
@@ -318,6 +390,9 @@ async function loadContainers() {
 
             tbody.appendChild(tr);
         }
+        updateTooltips()
+
+        loading.innerHTML = "";
     } catch (e) {
         console.error(e);
     }

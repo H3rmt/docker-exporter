@@ -5,8 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <title>Docker Exporter</title>
     <script src="chart.umd.min.js"></script>
+    <script src="popper.min.js"></script>
+    <script src="tippy.min.js"></script>
     <script src="main.js" defer></script>
     <link rel="stylesheet" href="main.css"/>
+    <link rel="stylesheet" href="tippy.animations.perspective.css"/>
+    <link rel="stylesheet" href="tippy.themes.translucent.css"/>
 </head>
 <body>
 <main>
@@ -63,6 +67,7 @@
                 <tr>
                     <th>Name</th>
                     <th>ID</th>
+                    <th>Image</th>
                     <th>CPU</th>
                     <th>Created</th>
                     <th>Mem Usage</th>
