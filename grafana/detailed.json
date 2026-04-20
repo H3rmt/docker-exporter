@@ -1,47 +1,4 @@
 {
-  "__inputs": [
-    {
-      "name": "DS_PROMETHEUS-DEV",
-      "label": "prometheus-dev",
-      "description": "",
-      "type": "datasource",
-      "pluginId": "prometheus",
-      "pluginName": "Prometheus"
-    }
-  ],
-  "__elements": {},
-  "__requires": [
-    {
-      "type": "grafana",
-      "id": "grafana",
-      "name": "Grafana",
-      "version": "12.1.1"
-    },
-    {
-      "type": "panel",
-      "id": "piechart",
-      "name": "Pie chart",
-      "version": ""
-    },
-    {
-      "type": "datasource",
-      "id": "prometheus",
-      "name": "Prometheus",
-      "version": "1.0.0"
-    },
-    {
-      "type": "panel",
-      "id": "stat",
-      "name": "Stat",
-      "version": ""
-    },
-    {
-      "type": "panel",
-      "id": "timeseries",
-      "name": "Time series",
-      "version": ""
-    }
-  ],
   "annotations": {
     "list": [
       {
@@ -68,7 +25,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": null,
+  "id": 15,
   "links": [],
   "panels": [
     {
@@ -189,7 +146,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS-DEV}"
+            "uid": "${source}"
           },
           "editorMode": "code",
           "expr": "max by(hostname) (docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left(name) docker_container_state)",
@@ -259,7 +216,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS-DEV}"
+            "uid": "${source}"
           },
           "disableTextWrap": false,
           "editorMode": "code",
@@ -274,6 +231,7 @@
           "useBackend": false
         }
       ],
+      "title": "",
       "transparent": true,
       "type": "piechart"
     },
@@ -331,7 +289,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS-DEV}"
+            "uid": "${source}"
           },
           "editorMode": "code",
           "expr": "count by(hostname) (docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left(name) docker_container_state == 3) or count by(hostname) (docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left(name) docker_container_state) * 0 ",
@@ -398,7 +356,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS-DEV}"
+            "uid": "${source}"
           },
           "editorMode": "code",
           "expr": "count by(hostname) (docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left(name) docker_container_state == 6) or count by(hostname) (docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left(name) docker_container_state) * 0 ",
@@ -469,7 +427,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS-DEV}"
+            "uid": "${source}"
           },
           "editorMode": "code",
           "expr": "count by(hostname) (docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left(name) docker_container_state == 5) or count by(hostname) (docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left(name) docker_container_state) * 0 ",
@@ -499,6 +457,7 @@
             "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
+            "axisSoftMax": 100,
             "barAlignment": 0,
             "barWidthFactor": 0.6,
             "drawStyle": "line",
@@ -565,7 +524,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS-DEV}"
+            "uid": "${source}"
           },
           "editorMode": "code",
           "expr": "sum by (hostname) (\n  docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"}\n  * on (container_id) group_left ()\n    rate(docker_container_cpu_nanoseconds_total[$__rate_interval])\n  / 1000 / 1000\n)",
@@ -665,7 +624,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS-DEV}"
+            "uid": "${source}"
           },
           "editorMode": "code",
           "expr": "sum by (hostname) (docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left()\ndocker_container_mem_usage_kib)",
@@ -775,7 +734,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS-DEV}"
+            "uid": "${source}"
           },
           "editorMode": "code",
           "expr": "docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left() docker_container_cpu_percent",
@@ -873,7 +832,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS-DEV}"
+            "uid": "${source}"
           },
           "disableTextWrap": false,
           "editorMode": "code",
@@ -906,6 +865,7 @@
             "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
+            "axisSoftMax": 100,
             "barAlignment": 0,
             "barWidthFactor": 0.6,
             "drawStyle": "line",
@@ -972,7 +932,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS-DEV}"
+            "uid": "${source}"
           },
           "editorMode": "code",
           "expr": "docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left() rate(docker_container_cpu_nanoseconds_total[$__rate_interval]) / 1000 / 1000",
@@ -1082,7 +1042,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS-DEV}"
+            "uid": "${source}"
           },
           "editorMode": "code",
           "expr": "docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left() (docker_container_mem_usage_kib / docker_container_mem_limit_kib)",
@@ -1191,7 +1151,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS-DEV}"
+            "uid": "${source}"
           },
           "editorMode": "code",
           "expr": "docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left() rate(docker_container_net_send_bytes_total[$__rate_interval]) * 8",
@@ -1287,7 +1247,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS-DEV}"
+            "uid": "${source}"
           },
           "editorMode": "code",
           "expr": "docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left() rate(docker_container_net_receive_bytes_total[$__rate_interval]) * 8",
@@ -1383,7 +1343,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS-DEV}"
+            "uid": "${source}"
           },
           "editorMode": "code",
           "expr": "docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left() docker_container_net_send_bytes_total",
@@ -1480,7 +1440,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS-DEV}"
+            "uid": "${source}"
           },
           "editorMode": "code",
           "expr": "docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left() docker_container_net_receive_bytes_total",
@@ -1590,7 +1550,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS-DEV}"
+            "uid": "${source}"
           },
           "editorMode": "code",
           "expr": "docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left() rate(docker_container_block_input_total[$__rate_interval])",
@@ -1687,7 +1647,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS-DEV}"
+            "uid": "${source}"
           },
           "editorMode": "code",
           "expr": "docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left() rate(docker_container_block_output_total[$__rate_interval])",
@@ -1783,7 +1743,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS-DEV}"
+            "uid": "${source}"
           },
           "editorMode": "code",
           "expr": "docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left() docker_container_block_input_total",
@@ -1881,7 +1841,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS-DEV}"
+            "uid": "${source}"
           },
           "editorMode": "code",
           "expr": "docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left() docker_container_block_output_total",
@@ -1995,7 +1955,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS-DEV}"
+            "uid": "${source}"
           },
           "editorMode": "code",
           "expr": "docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left() docker_container_rw_size_bytes",
@@ -2110,7 +2070,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS-DEV}"
+            "uid": "${source}"
           },
           "editorMode": "code",
           "expr": "docker_container_info{name=~\"$filter\", hostname=~\"$hostname\"} * on(container_id) group_left() docker_container_rootfs_size_bytes",
@@ -2125,6 +2085,7 @@
       "type": "timeseries"
     }
   ],
+  "preload": false,
   "refresh": "1m",
   "schemaVersion": 41,
   "tags": [],
@@ -2132,7 +2093,10 @@
     "list": [
       {
         "allowCustomValue": false,
-        "current": {},
+        "current": {
+          "text": "prometheus-dev",
+          "value": "aedfqmp15kr9cf"
+        },
         "includeAll": false,
         "label": "Source",
         "name": "source",
@@ -2145,7 +2109,10 @@
       {
         "allValue": ".*",
         "allowCustomValue": false,
-        "current": {},
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
         "datasource": {
           "type": "prometheus",
           "uid": "${source}"
@@ -2168,10 +2135,13 @@
       {
         "allValue": ".*",
         "allowCustomValue": false,
-        "current": {},
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
         "datasource": {
           "type": "prometheus",
-          "uid": "${DS_PROMETHEUS-DEV}"
+          "uid": "${source}"
         },
         "definition": "label_values(docker_container_info{hostname=~\"$hostname\"},name)",
         "includeAll": true,
@@ -2199,6 +2169,5 @@
   "timezone": "",
   "title": "Docker",
   "uid": "cUITC74Vk",
-  "version": 114,
-  "weekStart": ""
+  "version": 115
 }
