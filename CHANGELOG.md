@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.5.0](https://github.com/H3rmt/docker-exporter/compare/v1.4.3...v1.5.0) (2026-07-04)
+
+
+### Features
+
+* added better tooltips to website ([5e9c8c4](https://github.com/H3rmt/docker-exporter/commit/5e9c8c47dbdfdba6be74dd1f151d98d3f4c0ac91))
+* added images collector ([5e9c8c4](https://github.com/H3rmt/docker-exporter/commit/5e9c8c47dbdfdba6be74dd1f151d98d3f4c0ac91))
+
+
+### Bug Fixes
+
+* **deps:** update module github.com/moby/moby/client to v0.5.0 ([34a957c](https://github.com/H3rmt/docker-exporter/commit/34a957c028dd71cb551cd0247f87cee28344fd29))
+
 ## [1.4.3](https://github.com/H3rmt/docker-exporter/compare/v1.4.2...v1.4.3) (2026-02-25)
 
 
