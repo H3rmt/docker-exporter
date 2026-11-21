@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.5.0](https://github.com/H3rmt/docker-exporter/compare/v1.4.3...v1.5.0) (2026-11-21)
+
+
+### Features
+
+* added better tooltips to website ([5e9c8c4](https://github.com/H3rmt/docker-exporter/commit/5e9c8c47dbdfdba6be74dd1f151d98d3f4c0ac91))
+* added images collector ([5e9c8c4](https://github.com/H3rmt/docker-exporter/commit/5e9c8c47dbdfdba6be74dd1f151d98d3f4c0ac91))
+
+
+### Bug Fixes
+
+* **deps:** update module github.com/moby/moby/api to v1.57.0 ([f0a6f6d](https://github.com/H3rmt/docker-exporter/commit/f0a6f6d9aba8c95049bcfe0251b6fe24ee21dbd4))
+* **deps:** update module github.com/moby/moby/api to v1.57.0 ([6150345](https://github.com/H3rmt/docker-exporter/commit/6150345cab6e1b2dfc9951143c1ce78e09e0c8a2))
+* **deps:** update module github.com/moby/moby/client to v0.5.0 ([34a957c](https://github.com/H3rmt/docker-exporter/commit/34a957c028dd71cb551cd0247f87cee28344fd29))
+* **deps:** update module github.com/moby/moby/client to v0.6.3 ([d956830](https://github.com/H3rmt/docker-exporter/commit/d956830ea0e4d935cdc264142c6c5c4bef0b65f8))
+* **deps:** update module github.com/moby/moby/client to v0.6.3 ([e5331b1](https://github.com/H3rmt/docker-exporter/commit/e5331b1716704a0bdcfba0f91e7dc44d8bc3b5f3))
+* **deps:** update module github.com/prometheus/client_golang to v1.25.0 ([6a58fe6](https://github.com/H3rmt/docker-exporter/commit/6a58fe6dfd227ae1771c96ce13839edcc1aa9193))
+* **deps:** update module github.com/prometheus/client_golang to v1.25.0 ([a1b81da](https://github.com/H3rmt/docker-exporter/commit/a1b81da95b31bae03234a9105d8c57884aab6d18))
+
 ## [1.4.3](https://github.com/H3rmt/docker-exporter/compare/v1.4.2...v1.4.3) (2026-02-25)
 
 
