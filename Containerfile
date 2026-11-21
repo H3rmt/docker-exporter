@@ -4,8 +4,8 @@ ARG TARGETARCH
 ARG VERSION=main
 
 RUN apk --no-cache add ca-certificates tzdata && update-ca-certificates
-RUN echo "nobody:x:3000:3000:Nobody:/:" > /tmp/passwd
-RUN echo "NAME=\"Scratch\"" >> /tmp/os-release
+RUN echo "root:x:0:0::/:/bin/false" > /tmp/passwd
+RUN echo "NAME=\"scratch\"" >> /tmp/os-release
 WORKDIR /app
 
 COPY go.mod go.sum ./
